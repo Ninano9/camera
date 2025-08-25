@@ -13,11 +13,25 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      initialization-fail-timeout: 60000
   
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: false
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

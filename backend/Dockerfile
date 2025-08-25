@@ -1,12 +1,13 @@
 # Backend Dockerfile (Spring Boot)
-FROM openjdk:21-jdk-slim as build
+FROM eclipse-temurin:21-jdk-alpine as build
 
 # Gradle 설치
-RUN apt-get update && apt-get install -y wget unzip && \
+RUN apk add --no-cache wget unzip && \
     wget https://services.gradle.org/distributions/gradle-8.5-bin.zip && \
     unzip gradle-8.5-bin.zip && \
     mv gradle-8.5 /opt/gradle && \
-    ln -s /opt/gradle/bin/gradle /usr/bin/gradle
+    ln -s /opt/gradle/bin/gradle /usr/bin/gradle && \
+    rm gradle-8.5-bin.zip
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -25,10 +26,13 @@ COPY src/ src/
 RUN gradle build -x test --no-daemon
 
 # 실행용 경량 이미지
-FROM openjdk:21-jre-slim
+FROM eclipse-temurin:21-jre-alpine
+
+# curl 설치 (헬스체크용)
+RUN apk add --no-cache curl
 
 # 애플리케이션 사용자 생성
-RUN groupadd -r spring && useradd -r -g spring spring
+RUN addgroup -S spring && adduser -S spring -G spring
 
 # 작업 디렉토리 설정
 WORKDIR /app

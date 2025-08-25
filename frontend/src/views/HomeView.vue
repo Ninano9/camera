@@ -12,18 +12,18 @@
             웹 페이지 상호작용, OS 수준 동작, 앱별 커스텀 매핑을 제공합니다
           </p>
           <div class="hero-buttons">
-            <router-link to="/onboarding" class="btn btn-primary btn-lg">
-              시작하기
+            <router-link to="/camera" class="btn btn-primary btn-lg">
+              🎥 지금 시작하기
             </router-link>
-            <router-link to="/login" class="btn btn-outline btn-lg">
-              로그인
+            <router-link to="/guide" class="btn btn-outline btn-lg">
+              📚 사용 가이드
             </router-link>
           </div>
         </div>
         <div class="hero-video">
-          <div class="demo-placeholder">
-            <div class="demo-icon">📹</div>
-            <p>실시간 제스처 인식 데모</p>
+          <div class="preview-placeholder">
+            <div class="preview-icon">📹</div>
+            <p>실시간 제스처 인식</p>
           </div>
         </div>
       </div>
@@ -100,11 +100,11 @@
           <h2>지금 시작해보세요</h2>
           <p>몇 분만에 설정하고 새로운 인터랙션 경험을 만나보세요</p>
           <div class="cta-buttons">
-            <router-link to="/register" class="btn btn-primary btn-lg">
-              무료 회원가입
+            <router-link to="/camera" class="btn btn-primary btn-lg">
+              🎥 바로 시작하기
             </router-link>
-            <router-link to="/onboarding" class="btn btn-outline btn-lg">
-              데모 체험
+            <router-link to="/profiles" class="btn btn-outline btn-lg">
+              📝 프로파일 관리
             </router-link>
           </div>
         </div>
@@ -173,7 +173,7 @@ onMounted(() => {
   align-items: center;
 }
 
-.demo-placeholder {
+.preview-placeholder {
   width: 400px;
   height: 300px;
   background: rgba(255, 255, 255, 0.1);
@@ -186,7 +186,7 @@ onMounted(() => {
   text-align: center;
 }
 
-.demo-icon {
+.preview-icon {
   font-size: 4rem;
   margin-bottom: 1rem;
 }
@@ -310,7 +310,7 @@ onMounted(() => {
     align-items: center;
   }
   
-  .demo-placeholder {
+  .preview-placeholder {
     width: 100%;
     max-width: 350px;
     height: 250px;

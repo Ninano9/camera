@@ -6,13 +6,9 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useAuthStore } from './stores/auth'
 
-const authStore = useAuthStore()
-
-onMounted(async () => {
-  // 앱 시작 시 인증 상태 초기화
-  await authStore.initialize()
+onMounted(() => {
+  console.log('제스처 인식 플랫폼이 시작되었습니다.')
 })
 </script>
 

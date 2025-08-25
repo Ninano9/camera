@@ -12,9 +12,9 @@
             <span>📹</span>
             카메라 시작
           </router-link>
-          <button @click="logout" class="btn btn-outline">
-            로그아웃
-          </button>
+          <router-link to="/settings" class="btn btn-outline">
+            ⚙️ 설정
+          </router-link>
         </div>
       </header>
 
@@ -69,10 +69,10 @@
             <h3>설정</h3>
             <p>카메라 및 성능 설정</p>
           </router-link>
-          <router-link to="/onboarding" class="action-card">
-            <div class="action-icon">🎯</div>
-            <h3>튜토리얼</h3>
-            <p>제스처 인식 가이드</p>
+          <router-link to="/guide" class="action-card">
+            <div class="action-icon">📚</div>
+            <h3>사용 가이드</h3>
+            <p>제스처 인식 사용법</p>
           </router-link>
         </div>
       </section>
@@ -109,23 +109,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-
-const router = useRouter()
-const authStore = useAuthStore()
+import { ref, onMounted } from 'vue'
 
 // 임시 데이터
 const profileCount = ref(3)
 const activeMappingCount = ref(12)
-
-const userDisplayName = computed(() => authStore.userDisplayName)
-
-const logout = async () => {
-  await authStore.logout()
-  router.push('/')
-}
+const userDisplayName = ref('사용자')
 
 onMounted(() => {
   console.log('대시보드 로드됨')

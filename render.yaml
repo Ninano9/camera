@@ -12,20 +12,13 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./backend/Dockerfile
+    envVarsFromFile: ./backend/.env
     envVars:
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
       - key: DATABASE_URL
         fromService:
           type: pserv
           name: gesture-postgres
           property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: CORS_ALLOWED_ORIGINS
-        value: "https://gesture-frontend.onrender.com"
-      - key: PORT
-        value: 8080
 
   # Vue.js 프론트엔드 (정적 사이트)
   - type: web
@@ -35,8 +28,4 @@ services:
     buildCommand: "npm ci && npm run build"
     staticPublishPath: ./dist
     buildDir: ./frontend
-    envVars:
-      - key: VITE_API_BASE_URL
-        value: "https://gesture-backend.onrender.com/api"
-      - key: NODE_VERSION
-        value: "18"
+    envVarsFromFile: ./frontend/.env

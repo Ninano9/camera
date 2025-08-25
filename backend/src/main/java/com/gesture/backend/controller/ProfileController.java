@@ -4,6 +4,7 @@ import com.gesture.backend.dto.ProfileDto;
 import com.gesture.backend.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +37,7 @@ public class ProfileController {
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             log.error("Failed to get profile: {}", profileId, e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
@@ -82,7 +83,7 @@ public class ProfileController {
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             log.error("Failed to get default profile", e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 }

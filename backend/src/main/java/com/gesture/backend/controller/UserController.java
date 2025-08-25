@@ -4,6 +4,7 @@ import com.gesture.backend.dto.UserDto;
 import com.gesture.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,7 +48,7 @@ public class UserController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Failed to get user by id: {}", userId, e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 

@@ -4,6 +4,7 @@ import com.gesture.backend.dto.UserDto;
 import com.gesture.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +34,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Login failed", e);
-            return ResponseEntity.unauthorized().build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
@@ -45,7 +46,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Token refresh failed", e);
-            return ResponseEntity.unauthorized().build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 

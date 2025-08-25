@@ -15,6 +15,11 @@ export default defineConfig({
     host: true,
     cors: true
   },
+  preview: {
+    port: 4173,
+    host: true,
+    allowedHosts: ['camera-frontend-0gzf.onrender.com', '.onrender.com']
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

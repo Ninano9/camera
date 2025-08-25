@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: gesture-postgres
+    environment:
+      POSTGRES_DB: gesture
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - gesture-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: gesture-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gesture-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  gesture-network:
+    driver: bridge

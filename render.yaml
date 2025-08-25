@@ -1,10 +1,11 @@
 services:
   # PostgreSQL 데이터베이스
   - type: pserv
-    name: gesture-postgres
+    name: camera-db
     plan: free
-    databaseName: gesture
-    user: postgres
+    databaseName: camera
+    user: camera
+    region: oregon
 
   # Spring Boot 백엔드 API (Docker)
   - type: web
@@ -17,7 +18,7 @@ services:
       - key: DATABASE_URL
         fromService:
           type: pserv
-          name: gesture-postgres
+          name: camera-db
           property: connectionString
 
   # Vue.js 프론트엔드 (정적 사이트)

@@ -2,29 +2,16 @@ services:
   # PostgreSQL 데이터베이스
   - type: pserv
     name: gesture-postgres
-    env: docker
     plan: free
-    dockerfilePath: ./database/Dockerfile
-    envVars:
-      - key: POSTGRES_DB
-        value: gesture
-      - key: POSTGRES_USER
-        value: postgres
-      - key: POSTGRES_PASSWORD
-        generateValue: true
-    disk:
-      name: gesture-db-disk
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
+    databaseName: gesture
+    user: postgres
 
-  # Spring Boot 백엔드 API
+  # Spring Boot 백엔드 API (Docker)
   - type: web
     name: gesture-backend
-    env: java
+    env: docker
     plan: free
-    buildCommand: "./gradlew build -x test"
-    startCommand: "java -jar build/libs/gesture-backend-0.0.1-SNAPSHOT.jar"
-    buildDir: ./backend
+    dockerfilePath: ./backend/Dockerfile
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
@@ -40,7 +27,7 @@ services:
       - key: PORT
         value: 8080
 
-  # Vue.js 프론트엔드
+  # Vue.js 프론트엔드 (정적 사이트)
   - type: web
     name: gesture-frontend
     env: static
@@ -53,8 +40,3 @@ services:
         value: "https://gesture-backend.onrender.com/api"
       - key: NODE_VERSION
         value: "18"
-
-databases:
-  - name: gesture-postgres
-    databaseName: gesture
-    user: postgres

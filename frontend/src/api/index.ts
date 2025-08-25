@@ -1,4 +1,5 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse } from 'axios';
 import type { 
   User, 
   Profile, 
@@ -10,7 +11,7 @@ import type {
 } from '../types';
 
 // API 클라이언트 설정
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://jsonplaceholder.typicode.com';
 
 class ApiClient {
   private client: AxiosInstance;

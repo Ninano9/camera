@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
+    "start": "vite preview --port $PORT --host 0.0.0.0",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
@@ -21,10 +22,10 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
-    "@vue/tsconfig": "^0.7.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.1.2",
-    "vue-tsc": "^3.0.5"
+    "@vitejs/plugin-vue": "^4.6.2",
+    "@vue/tsconfig": "^0.4.0",
+    "typescript": "~4.9.5",
+    "vite": "^4.5.3",
+    "vue-tsc": "^1.8.27"
   }
 }

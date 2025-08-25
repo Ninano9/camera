@@ -1,0 +1,14 @@
+services:
+  # Vue.js 프론트엔드만 먼저 배포
+  - type: web
+    name: gesture-frontend
+    env: static
+    plan: free
+    buildCommand: "npm ci && npm run build"
+    staticPublishPath: ./dist
+    buildDir: ./frontend
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: "https://jsonplaceholder.typicode.com"  # 임시 API URL
+      - key: NODE_VERSION
+        value: "18"

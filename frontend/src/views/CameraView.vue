@@ -189,46 +189,131 @@ const gazeStatus = computed(() => {
   }
 })
 
-// 마우스 제어 함수들
-const simulateMouseMove = (x: number, y: number) => {
-  // 웹에서는 직접적인 마우스 제어가 불가능하므로 시뮬레이션
-  console.log(`🖱️ 마우스 이동: (${Math.round(x)}, ${Math.round(y)})`)
-  
-  // 화면에 커서 위치 표시용 이벤트 발생
-  const event = new CustomEvent('gesture-mouse-move', {
-    detail: { x, y }
-  })
-  window.dispatchEvent(event)
+// 백엔드 API를 통한 실제 마우스 제어 함수들
+const executeMouseMove = async (x: number, y: number) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gestureType: 'mouse_move',
+        x: Math.round(x),
+        y: Math.round(y)
+      })
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      console.log(`🖱️ 실제 마우스 이동: (${Math.round(x)}, ${Math.round(y)})`)
+    } else {
+      console.error('❌ 마우스 이동 실패:', result.message)
+    }
+  } catch (error) {
+    console.error('❌ 마우스 이동 API 호출 실패:', error)
+    // 백엔드가 연결되지 않은 경우 시뮬레이션으로 대체
+    console.log(`🖱️ 마우스 이동 시뮬레이션: (${Math.round(x)}, ${Math.round(y)})`)
+  }
 }
 
-const simulateClick = (button: 'left' | 'right' = 'left') => {
-  console.log(`🖱️ ${button} 클릭 시뮬레이션`)
-  isPerformingAction.value = true
-  
-  setTimeout(() => {
-    isPerformingAction.value = false
-  }, 500)
-  
-  // 실제 클릭 이벤트 발생
-  const event = new CustomEvent('gesture-click', {
-    detail: { button }
-  })
-  window.dispatchEvent(event)
+const executeClick = async (button: 'left' | 'right' = 'left') => {
+  try {
+    isPerformingAction.value = true
+    
+    const endpoint = button === 'left' ? 'left-click' : 'right-click'
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      console.log(`🖱️ 실제 ${button} 클릭 실행 완료`)
+    } else {
+      console.error(`❌ ${button} 클릭 실패:`, result.message)
+    }
+    
+    setTimeout(() => {
+      isPerformingAction.value = false
+    }, 500)
+    
+  } catch (error) {
+    console.error(`❌ ${button} 클릭 API 호출 실패:`, error)
+    // 백엔드가 연결되지 않은 경우 페이지 스크롤로 대체
+    if (button === 'left') {
+      window.scrollBy(0, -50) // 위로 스크롤
+    }
+    
+    setTimeout(() => {
+      isPerformingAction.value = false
+    }, 500)
+  }
 }
 
-const simulateScroll = (direction: 'up' | 'down') => {
-  console.log(`📜 스크롤 ${direction === 'up' ? '위로' : '아래로'}`)
-  isPerformingAction.value = true
-  
-  setTimeout(() => {
-    isPerformingAction.value = false
-  }, 300)
-  
-  // 실제 스크롤 이벤트 발생
-  window.scrollBy(0, direction === 'up' ? -100 : 100)
+const executeScroll = async (direction: 'up' | 'down') => {
+  try {
+    isPerformingAction.value = true
+    
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/scroll`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gestureType: `scroll_${direction}`,
+        direction: direction,
+        amount: 3
+      })
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      console.log(`📜 실제 스크롤 ${direction === 'up' ? '위로' : '아래로'} 실행 완료`)
+    } else {
+      console.error(`❌ 스크롤 ${direction} 실패:`, result.message)
+    }
+    
+    setTimeout(() => {
+      isPerformingAction.value = false
+    }, 300)
+    
+  } catch (error) {
+    console.error(`❌ 스크롤 ${direction} API 호출 실패:`, error)
+    // 백엔드가 연결되지 않은 경우 페이지 스크롤로 대체
+    window.scrollBy(0, direction === 'up' ? -100 : 100)
+    
+    setTimeout(() => {
+      isPerformingAction.value = false
+    }, 300)
+  }
 }
 
-// 손 제스처 분석 및 액션 실행 함수
+const executeKeyPress = async (key: string) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/keyboard/key?key=${key}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    const result = await response.json()
+    if (result.success) {
+      console.log(`⌨️ 실제 ${key} 키 입력 완료`)
+    } else {
+      console.error(`❌ ${key} 키 입력 실패:`, result.message)
+    }
+  } catch (error) {
+    console.error(`❌ ${key} 키 입력 API 호출 실패:`, error)
+    // 백엔드가 연결되지 않은 경우 브라우저 이벤트로 대체
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: key }))
+  }
+}
+
+// 향상된 손 제스처 분석 및 액션 실행 함수
 const analyzeGestureAndPerformAction = (landmarks: any) => {
   const gestures: string[] = []
   
@@ -239,64 +324,67 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
   
   const hand = landmarks[0]
   
-  // 손가락 끝점과 관절점 인덱스
-  const fingerTips = [4, 8, 12, 16, 20] // 엄지, 검지, 중지, 약지, 소지
-  const fingerMcps = [2, 5, 9, 13, 17] // 각 손가락의 기준점
+  // 더 정확한 손가락 상태 분석
+  const fingerStates = analyzeFingerStates(hand)
+  const upFingerCount = fingerStates.filter(Boolean).length
   
-  // 손가락이 펴져있는지 확인
-  const isFingerUp = (tipIndex: number, mcpIndex: number) => {
-    if (tipIndex === 4) { // 엄지는 다르게 처리
-      return hand[tipIndex].x > hand[tipIndex - 1].x
-    }
-    return hand[tipIndex].y < hand[mcpIndex].y
-  }
+  // 손 위치 및 움직임 분석
+  const handPosition = analyzeHandPosition(hand)
+  const handMovement = analyzeHandMovement(hand)
   
-  const fingersUp = fingerTips.map((tip, index) => 
-    isFingerUp(tip, fingerMcps[index])
-  )
-  
-  const upFingerCount = fingersUp.filter(Boolean).length
-  
-  // 손목 위치 (마우스 커서 제어용)
-  const wrist = hand[0]
+  // 화면 좌표로 변환 (부드러운 이동을 위한 보정)
   const indexTip = hand[8] // 검지 끝
-  
-  // 화면 좌표로 변환 (0~1 범위를 화면 크기로 변환)
-  const screenX = indexTip.x * window.innerWidth
-  const screenY = indexTip.y * window.innerHeight
+  const smoothedX = indexTip.x * window.innerWidth
+  const smoothedY = indexTip.y * window.innerHeight
   
   let detectedGesture = ''
   
-  // 제스처 인식 및 액션
-  if (upFingerCount === 1 && fingersUp[1]) {
+  // 더 정확한 제스처 인식
+  if (upFingerCount === 1 && fingerStates[1]) {
     // 검지만 펼침 - 마우스 포인터 모드
     detectedGesture = '마우스 포인터 👆'
     gestures.push(detectedGesture)
-    simulateMouseMove(screenX, screenY)
+    gestures.push(`위치: (${Math.round(smoothedX)}, ${Math.round(smoothedY)})`)
+    
+    // 실제 마우스 이동 (백엔드 API 호출)
+    executeMouseMove(smoothedX, smoothedY)
+    
+    // 손 움직임 속도 표시
+    if (handMovement.speed > 0.02) {
+      gestures.push(`빠른 이동 🚀`)
+    }
     
   } else if (upFingerCount === 0) {
     // 주먹 - 좌클릭
-    detectedGesture = '좌클릭 ✊'
+    detectedGesture = '좌클릭 준비 ✊'
     gestures.push(detectedGesture)
     
     if (currentGesture.value === detectedGesture) {
       gestureHoldTime.value += 1
+      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 10) * 100)}%`)
+      
       if (gestureHoldTime.value === 10) { // 약 0.3초 유지 시
-        simulateClick('left')
+        detectedGesture = '좌클릭 실행! 🖱️'
+        executeClick('left')
+        gestureHoldTime.value = 0
       }
     } else {
       gestureHoldTime.value = 0
     }
     
-  } else if (upFingerCount === 2 && fingersUp[1] && fingersUp[2]) {
+  } else if (upFingerCount === 2 && fingerStates[1] && fingerStates[2]) {
     // 브이 - 우클릭
-    detectedGesture = '우클릭 ✌️'
+    detectedGesture = '우클릭 준비 ✌️'
     gestures.push(detectedGesture)
     
     if (currentGesture.value === detectedGesture) {
       gestureHoldTime.value += 1
+      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 10) * 100)}%`)
+      
       if (gestureHoldTime.value === 10) {
-        simulateClick('right')
+        detectedGesture = '우클릭 실행! 🖱️'
+        executeClick('right')
+        gestureHoldTime.value = 0
       }
     } else {
       gestureHoldTime.value = 0
@@ -306,53 +394,113 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
     // 손바닥 - 스크롤 모드
     detectedGesture = '스크롤 모드 ✋'
     gestures.push(detectedGesture)
+    gestures.push(`손 위치: ${handPosition.vertical}`)
     
     // 손의 세로 위치로 스크롤 방향 결정
-    if (wrist.y < 0.3) {
-      gestures.push('위로 스크롤')
+    if (handPosition.isTop) {
+      gestures.push('⬆️ 위로 스크롤 준비')
       if (currentGesture.value === detectedGesture) {
         gestureHoldTime.value += 1
         if (gestureHoldTime.value === 15) { // 약 0.5초 유지 시
-          simulateScroll('up')
+          executeScroll('up')
           gestureHoldTime.value = 0
         }
       }
-    } else if (wrist.y > 0.7) {
-      gestures.push('아래로 스크롤')
+    } else if (handPosition.isBottom) {
+      gestures.push('⬇️ 아래로 스크롤 준비')
       if (currentGesture.value === detectedGesture) {
         gestureHoldTime.value += 1
         if (gestureHoldTime.value === 15) {
-          simulateScroll('down')
+          executeScroll('down')
           gestureHoldTime.value = 0
         }
       }
+    } else {
+      gestures.push('↕️ 스크롤 대기 (위/아래로 이동)')
     }
     
-  } else if (upFingerCount === 3 && fingersUp[0] && fingersUp[1] && fingersUp[4]) {
+  } else if (upFingerCount === 3 && fingerStates[0] && fingerStates[1] && fingerStates[4]) {
     // 아이러브유 - 특수 기능 (ESC)
-    detectedGesture = 'ESC 키 🤟'
+    detectedGesture = 'ESC 키 준비 🤟'
     gestures.push(detectedGesture)
     
     if (currentGesture.value === detectedGesture) {
       gestureHoldTime.value += 1
+      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 20) * 100)}%`)
+      
       if (gestureHoldTime.value === 20) { // 약 0.7초 유지 시
         console.log('⌨️ ESC 키 눌림')
-        // ESC 키 시뮬레이션
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        detectedGesture = 'ESC 키 실행! ⌨️'
+        executeKeyPress('ESCAPE')
         gestureHoldTime.value = 0
       }
     } else {
       gestureHoldTime.value = 0
     }
+    
+  } else {
+    // 인식되지 않은 제스처
+    detectedGesture = `알 수 없는 제스처 (${upFingerCount}개 손가락)`
+    gestures.push(detectedGesture)
+    gestures.push('위 사용법을 참고하세요 📖')
   }
   
   // 제스처 변경 감지
   if (currentGesture.value !== detectedGesture) {
     currentGesture.value = detectedGesture
     gestureHoldTime.value = 0
+    
+    // 제스처 변경 로그
+    console.log(`🔄 제스처 변경: ${detectedGesture}`)
   }
   
   return gestures
+}
+
+// 더 정확한 손가락 상태 분석
+const analyzeFingerStates = (hand: any) => {
+  const fingerTips = [4, 8, 12, 16, 20] // 엄지, 검지, 중지, 약지, 소지
+  const fingerPips = [3, 6, 10, 14, 18] // 각 손가락의 중간 관절
+  const fingerMcps = [2, 5, 9, 13, 17] // 각 손가락의 기준점
+  
+  return fingerTips.map((tipIndex, index) => {
+    const tip = hand[tipIndex]
+    const pip = hand[fingerPips[index]]
+    const mcp = hand[fingerMcps[index]]
+    
+    if (tipIndex === 4) { // 엄지는 좌우 방향으로 판단
+      return tip.x > pip.x // 오른손 기준
+    } else { // 다른 손가락들은 위아래 방향으로 판단
+      return tip.y < pip.y && pip.y < mcp.y
+    }
+  })
+}
+
+// 손 위치 분석
+const analyzeHandPosition = (hand: any) => {
+  const wrist = hand[0]
+  const middleTip = hand[12]
+  
+  return {
+    vertical: wrist.y < 0.3 ? '상단' : wrist.y > 0.7 ? '하단' : '중앙',
+    horizontal: wrist.x < 0.3 ? '좌측' : wrist.x > 0.7 ? '우측' : '중앙',
+    isTop: wrist.y < 0.3,
+    isBottom: wrist.y > 0.7,
+    isLeft: wrist.x < 0.3,
+    isRight: wrist.x > 0.7,
+    centerDistance: Math.sqrt(Math.pow(wrist.x - 0.5, 2) + Math.pow(wrist.y - 0.5, 2))
+  }
+}
+
+// 손 움직임 분석 (간단한 버전)
+const analyzeHandMovement = (hand: any) => {
+  const wrist = hand[0]
+  
+  // 이전 위치와 비교 (실제로는 이전 프레임 데이터 저장 필요)
+  return {
+    speed: 0.01, // 임시 값
+    direction: 'static'
+  }
 }
 
 // CDN 스크립트 로드 함수
@@ -371,11 +519,55 @@ const loadScript = (src: string): Promise<void> => {
   })
 }
 
-// 손 랜드마크 연결선 그리기
+// 향상된 손 랜드마크 연결선 그리기
 const drawHandConnections = (ctx: CanvasRenderingContext2D, landmarks: any[], connections: number[][]) => {
-  ctx.strokeStyle = '#00FF00'
-  ctx.lineWidth = 2
+  // 각 손가락별로 다른 색상 사용
+  const fingerColors = {
+    thumb: '#FF6B6B',     // 빨간색 - 엄지
+    index: '#4ECDC4',     // 청록색 - 검지
+    middle: '#45B7D1',    // 파란색 - 중지
+    ring: '#96CEB4',      // 연두색 - 약지
+    pinky: '#FFEAA7',     // 노란색 - 소지
+    palm: '#DDA0DD'       // 보라색 - 손바닥
+  }
   
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  
+  // 엄지 연결선
+  ctx.strokeStyle = fingerColors.thumb
+  const thumbConnections = [[0, 1], [1, 2], [2, 3], [3, 4]]
+  drawFingerConnections(ctx, landmarks, thumbConnections)
+  
+  // 검지 연결선
+  ctx.strokeStyle = fingerColors.index
+  const indexConnections = [[0, 5], [5, 6], [6, 7], [7, 8]]
+  drawFingerConnections(ctx, landmarks, indexConnections)
+  
+  // 중지 연결선
+  ctx.strokeStyle = fingerColors.middle
+  const middleConnections = [[5, 9], [9, 10], [10, 11], [11, 12]]
+  drawFingerConnections(ctx, landmarks, middleConnections)
+  
+  // 약지 연결선
+  ctx.strokeStyle = fingerColors.ring
+  const ringConnections = [[9, 13], [13, 14], [14, 15], [15, 16]]
+  drawFingerConnections(ctx, landmarks, ringConnections)
+  
+  // 소지 연결선
+  ctx.strokeStyle = fingerColors.pinky
+  const pinkyConnections = [[13, 17], [17, 18], [18, 19], [19, 20]]
+  drawFingerConnections(ctx, landmarks, pinkyConnections)
+  
+  // 손바닥 연결선
+  ctx.strokeStyle = fingerColors.palm
+  const palmConnections = [[0, 17]]
+  drawFingerConnections(ctx, landmarks, palmConnections)
+}
+
+// 개별 손가락 연결선 그리기 헬퍼 함수
+const drawFingerConnections = (ctx: CanvasRenderingContext2D, landmarks: any[], connections: number[][]) => {
   for (const connection of connections) {
     const start = landmarks[connection[0]]
     const end = landmarks[connection[1]]
@@ -387,16 +579,45 @@ const drawHandConnections = (ctx: CanvasRenderingContext2D, landmarks: any[], co
   }
 }
 
-// 손 랜드마크 포인트 그리기
+// 향상된 손 랜드마크 포인트 그리기
 const drawHandLandmarks = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
-  ctx.fillStyle = '#FF0000'
+  // 관절점 유형별 색상과 크기
+  const landmarkStyles = {
+    wrist: { color: '#8B4513', size: 8 },      // 손목 - 갈색
+    thumb: { color: '#FF6B6B', size: 6 },      // 엄지 - 빨간색
+    index: { color: '#4ECDC4', size: 6 },      // 검지 - 청록색
+    middle: { color: '#45B7D1', size: 6 },     // 중지 - 파란색
+    ring: { color: '#96CEB4', size: 6 },       // 약지 - 연두색
+    pinky: { color: '#FFEAA7', size: 6 },      // 소지 - 노란색
+    palm: { color: '#DDA0DD', size: 5 }        // 손바닥 - 보라색
+  }
   
-  for (const landmark of landmarks) {
+  // 각 랜드마크별 스타일 지정
+  const landmarkTypeMap = [
+    'wrist',                                    // 0: 손목
+    'thumb', 'thumb', 'thumb', 'thumb',        // 1-4: 엄지
+    'index', 'index', 'index', 'index',        // 5-8: 검지
+    'middle', 'middle', 'middle', 'middle',    // 9-12: 중지
+    'ring', 'ring', 'ring', 'ring',           // 13-16: 약지
+    'pinky', 'pinky', 'pinky', 'pinky'        // 17-20: 소지
+  ]
+  
+  for (let i = 0; i < landmarks.length; i++) {
+    const landmark = landmarks[i]
     const x = landmark.x * ctx.canvas.width
     const y = landmark.y * ctx.canvas.height
+    const style = landmarkStyles[landmarkTypeMap[i]] || landmarkStyles.palm
     
+    // 외곽 원 (테두리)
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
-    ctx.arc(x, y, 3, 0, 2 * Math.PI)
+    ctx.arc(x, y, style.size + 1, 0, 2 * Math.PI)
+    ctx.fill()
+    
+    // 내부 원 (색상)
+    ctx.fillStyle = style.color
+    ctx.beginPath()
+    ctx.arc(x, y, style.size, 0, 2 * Math.PI)
     ctx.fill()
   }
 }

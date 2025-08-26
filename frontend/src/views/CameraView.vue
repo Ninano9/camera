@@ -843,85 +843,94 @@ const initializeMediaPipe = async () => {
       }
     })
     
-    // 카메라와 MediaPipe 연결
+    // 수동 프레임 처리 방식으로 변경 (Camera 객체 대신)
     if (videoElement.value) {
-      console.log('📷 MediaPipe Camera 객체 생성 중...')
+      console.log('📷 수동 프레임 처리 방식으로 MediaPipe 연결 중...')
       
+      // 원시 비디오 엘리먼트 참조 저장 (Vue 반응형 시스템 우회)
+      const rawVideoElement = toRaw(videoElement.value)
       let frameCount = 0
-      camera.value = new Camera(videoElement.value, {
-        onFrame: async () => {
-          frameCount++
-          
-          if (hands.value && videoElement.value) {
-            try {
-              // 비디오 상태 체크
-              const video = videoElement.value
-              if (video.videoWidth === 0 || video.videoHeight === 0) {
-                if (frameCount % 30 === 0) {
-                  console.warn('⚠️ 비디오 크기가 0입니다:', {
-                    videoWidth: video.videoWidth,
-                    videoHeight: video.videoHeight,
-                    readyState: video.readyState
-                  })
-                }
-                return
-              }
-              
-              // 추가 안전성 체크
-              if (video.readyState < 2) { // HAVE_CURRENT_DATA
-                if (frameCount % 30 === 0) {
-                  console.warn('⚠️ 비디오가 아직 준비되지 않음:', video.readyState)
-                }
-                return
-              }
-              
-              // Vue 반응형 시스템과의 충돌을 방지
-              // toRaw 사용 + 추가 안전장치
-              try {
-                const rawVideo = toRaw(video)
-                
-                // MediaPipe에 안전하게 전송
-                await hands.value.send({ image: rawVideo })
-                
-                // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
-                if (frameCount <= 5 || frameCount % 100 === 0) {
-                  console.log(`📸 MediaPipe로 프레임 전송: ${frameCount}번째`)
-                  console.log(`📐 비디오 크기: ${video.videoWidth}x${video.videoHeight}`)
-                }
-              } catch (sendError) {
-                // 전송 실패 시 다른 방법 시도
-                console.warn('⚠️ toRaw 방식 실패, 직접 전송 시도:', sendError.message)
-                await hands.value.send({ image: video })
-              }
-              
-            } catch (frameError) {
-              console.error('⚠️ 프레임 전송 오류:', frameError)
-              
-              // 오류 발생 시 MediaPipe 재초기화 시도
-              if (frameError.message.includes('proxy') || frameError.message.includes('$$')) {
-                console.log('🔄 MediaPipe 프록시 오류 - 재초기화 필요할 수 있음')
-              }
-            }
-          } else {
+      let isProcessing = false
+      
+      // 수동 프레임 처리 함수
+      const processFrame = async () => {
+        if (!isGestureActive.value || !hands.value || isProcessing) {
+          return
+        }
+        
+        isProcessing = true
+        frameCount++
+        
+        try {
+          // 비디오 상태 체크
+          if (rawVideoElement.videoWidth === 0 || rawVideoElement.videoHeight === 0) {
             if (frameCount % 30 === 0) {
-              console.warn('⚠️ Hands 객체 또는 비디오 엘리먼트 없음:', {
-                hasHands: !!hands.value,
-                hasVideo: !!videoElement.value
+              console.warn('⚠️ 비디오 크기가 0입니다:', {
+                videoWidth: rawVideoElement.videoWidth,
+                videoHeight: rawVideoElement.videoHeight,
+                readyState: rawVideoElement.readyState
               })
             }
+            isProcessing = false
+            requestAnimationFrame(processFrame)
+            return
           }
-        },
-        width: 1280,
-        height: 720
-      })
+          
+          // 추가 안전성 체크
+          if (rawVideoElement.readyState < 2) { // HAVE_CURRENT_DATA
+            if (frameCount % 30 === 0) {
+              console.warn('⚠️ 비디오가 아직 준비되지 않음:', rawVideoElement.readyState)
+            }
+            isProcessing = false
+            requestAnimationFrame(processFrame)
+            return
+          }
+          
+          // MediaPipe에 프레임 전송 (원시 엘리먼트 직접 사용)
+          await hands.value.send({ image: rawVideoElement })
+          
+          // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
+          if (frameCount <= 5 || frameCount % 100 === 0) {
+            console.log(`📸 수동 프레임 처리: ${frameCount}번째`)
+            console.log(`📐 비디오 크기: ${rawVideoElement.videoWidth}x${rawVideoElement.videoHeight}`)
+          }
+          
+        } catch (frameError) {
+          console.error('⚠️ 프레임 처리 오류:', frameError)
+          
+          // 심각한 오류 시 잠시 대기
+          if (frameError.message.includes('proxy') || frameError.message.includes('$$')) {
+            console.log('🔄 프록시 오류 감지 - 1초 대기 후 재시도')
+            setTimeout(() => {
+              isProcessing = false
+              if (isGestureActive.value) {
+                requestAnimationFrame(processFrame)
+              }
+            }, 1000)
+            return
+          }
+        }
+        
+        isProcessing = false
+        
+        // 다음 프레임 처리 예약
+        if (isGestureActive.value) {
+          requestAnimationFrame(processFrame)
+        }
+      }
       
-      console.log('📹 MediaPipe 카메라 연결 완료')
-      console.log('🎬 카메라 해상도: 1280x720')
+      // 프레임 처리 시작
+      console.log('🎬 수동 프레임 처리 시작...')
+      requestAnimationFrame(processFrame)
       
-      // 카메라 시작
-      console.log('🎬 MediaPipe 카메라 시작 중...')
-      await camera.value.start()
-      console.log('✅ MediaPipe 카메라 시작 완료!')
+      // camera.value를 null로 설정 (Camera 객체 사용하지 않음)
+      camera.value = {
+        start: () => Promise.resolve(),
+        stop: () => Promise.resolve()
+      }
+      
+      console.log('📹 수동 프레임 처리 연결 완료')
+      console.log('🎬 처리 해상도: 1280x720')
       
     } else {
       throw new Error('❌ 비디오 엘리먼트가 준비되지 않음')
@@ -1099,11 +1108,7 @@ const toggleGestureRecognition = async () => {
         await initializeMediaPipe()
       } else {
         console.log('♻️ 기존 MediaPipe 재사용')
-        // 기존 카메라가 있다면 재시작
-        if (camera.value) {
-          console.log('📷 기존 MediaPipe 카메라 재시작...')
-          await camera.value.start()
-        }
+        console.log('📷 수동 프레임 처리가 이미 실행 중입니다.')
       }
       
       console.log('🎉 제스처 인식 시작 완료!')
@@ -1122,15 +1127,8 @@ const toggleGestureRecognition = async () => {
   } else {
     console.log('🛑 제스처 인식 비활성화')
     
-    // MediaPipe 카메라 중지
-    if (camera.value) {
-      try {
-        await camera.value.stop()
-        console.log('📷 MediaPipe 카메라 중지 완료')
-      } catch (error) {
-        console.error('⚠️ MediaPipe 카메라 중지 오류:', error)
-      }
-    }
+    // 수동 프레임 처리 중지 (isGestureActive.value = false로 이미 중지됨)
+    console.log('📷 수동 프레임 처리 중지 완료')
     
     // 캔버스 클리어
     if (canvasElement.value) {

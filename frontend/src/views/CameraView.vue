@@ -1077,6 +1077,110 @@ const stopCamera = () => {
 }
 
 // 제스처 인식 토글
+// 프레임 처리 시작 함수 (재사용 가능)
+const startFrameProcessing = async () => {
+  console.log('🎬 프레임 처리 재시작 중...')
+  
+  const videoElements = document.querySelectorAll('video')
+  const nativeVideoElement = videoElements[0] as HTMLVideoElement
+  
+  if (!nativeVideoElement) {
+    console.error('❌ 비디오 엘리먼트를 찾을 수 없습니다.')
+    return
+  }
+  
+  console.log('📷 비디오 엘리먼트 재확인 완료')
+  console.log('📐 비디오 크기:', nativeVideoElement.videoWidth, 'x', nativeVideoElement.videoHeight)
+  
+  let frameCount = 0
+  let isProcessing = false
+  
+  // Canvas 생성 (MediaPipe용 임시 캔버스)
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = 640
+  tempCanvas.height = 480
+  const tempCtx = tempCanvas.getContext('2d')
+  
+  // 프레임 처리 함수
+  const processFrame = async () => {
+    if (!isGestureActive.value || !nativeHands || isProcessing) {
+      return
+    }
+    
+    isProcessing = true
+    frameCount++
+    
+    // 프레임 건너뛰기로 성능 최적화 (3프레임마다 1번만 처리)
+    if (frameCount % 3 !== 0) {
+      isProcessing = false
+      requestAnimationFrame(processFrame)
+      return
+    }
+    
+    try {
+      // 비디오 상태 체크
+      if (nativeVideoElement.videoWidth === 0 || nativeVideoElement.videoHeight === 0) {
+        if (frameCount % 30 === 0) {
+          console.warn('⚠️ 비디오 크기가 0입니다:', {
+            videoWidth: nativeVideoElement.videoWidth,
+            videoHeight: nativeVideoElement.videoHeight,
+            readyState: nativeVideoElement.readyState
+          })
+        }
+        isProcessing = false
+        requestAnimationFrame(processFrame)
+        return
+      }
+      
+      // 추가 안전성 체크
+      if (nativeVideoElement.readyState < 2) { // HAVE_CURRENT_DATA
+        if (frameCount % 30 === 0) {
+          console.warn('⚠️ 비디오가 아직 준비되지 않음:', nativeVideoElement.readyState)
+        }
+        isProcessing = false
+        requestAnimationFrame(processFrame)
+        return
+      }
+      
+      // 임시 캔버스에 비디오 프레임 그리기
+      if (tempCtx) {
+        tempCtx.drawImage(nativeVideoElement, 0, 0, tempCanvas.width, tempCanvas.height)
+        
+        // 네이티브 MediaPipe에 캔버스 전송 (프록시 없음)
+        await nativeHands.send({ image: tempCanvas })
+        
+        // 프레임 전송 확인 (매우 제한적)
+        if (frameCount <= 2) {
+          console.log(`📸 프레임 재시작: ${frameCount}번째`)
+        }
+      }
+      
+    } catch (frameError) {
+      console.error('⚠️ 프레임 처리 오류:', frameError)
+      
+      // 오류 발생 시 잠시 대기
+      setTimeout(() => {
+        isProcessing = false
+        if (isGestureActive.value) {
+          requestAnimationFrame(processFrame)
+        }
+      }, 100)
+      return
+    }
+    
+    isProcessing = false
+    
+    // 다음 프레임 처리 예약
+    if (isGestureActive.value) {
+      requestAnimationFrame(processFrame)
+    }
+  }
+  
+  // 프레임 처리 시작
+  console.log('🎬 프레임 처리 재시작 완료')
+  requestAnimationFrame(processFrame)
+}
+
 const toggleGestureRecognition = async () => {
   isGestureActive.value = !isGestureActive.value
   console.log(`${isGestureActive.value ? '▶️' : '⏸️'} 제스처 인식: ${isGestureActive.value ? '시작' : '정지'}`)
@@ -1111,8 +1215,9 @@ const toggleGestureRecognition = async () => {
         console.log('🤖 네이티브 MediaPipe 첫 초기화 시작...')
         await initializeMediaPipe()
       } else {
-        console.log('♻️ 기존 네이티브 MediaPipe 재사용')
-        console.log('📷 네이티브 프레임 처리가 이미 실행 중입니다.')
+        console.log('♻️ 기존 네이티브 MediaPipe 재사용 - 프레임 처리 재시작')
+        // 제스처 재시작 시 프레임 처리도 다시 시작
+        await startFrameProcessing()
       }
       
       console.log('🎉 제스처 인식 시작 완료!')

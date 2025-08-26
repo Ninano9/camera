@@ -77,6 +77,48 @@
         </div>
       </div>
       
+      <!-- 제스처 사용법 안내 -->
+      <div v-if="isGestureActive" class="gesture-guide">
+        <h3>🖐️ 제스처 사용법</h3>
+        <div class="gesture-instructions">
+          <div class="instruction-item">
+            <span class="gesture-icon">👆</span>
+            <div class="instruction-text">
+              <strong>마우스 포인터</strong>
+              <p>검지만 펼치고 손을 움직여 커서 이동</p>
+            </div>
+          </div>
+          <div class="instruction-item">
+            <span class="gesture-icon">✊</span>
+            <div class="instruction-text">
+              <strong>좌클릭</strong>
+              <p>주먹 쥐고 0.3초 유지</p>
+            </div>
+          </div>
+          <div class="instruction-item">
+            <span class="gesture-icon">✌️</span>
+            <div class="instruction-text">
+              <strong>우클릭</strong>
+              <p>브이 사인 만들고 0.3초 유지</p>
+            </div>
+          </div>
+          <div class="instruction-item">
+            <span class="gesture-icon">✋</span>
+            <div class="instruction-text">
+              <strong>스크롤</strong>
+              <p>손바닥 펼치고 위/아래 위치에서 0.5초 유지</p>
+            </div>
+          </div>
+          <div class="instruction-item">
+            <span class="gesture-icon">🤟</span>
+            <div class="instruction-text">
+              <strong>ESC 키</strong>
+              <p>아이러브유 사인 0.7초 유지</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 디버그 정보 -->
       <div v-if="debugInfo" class="debug-panel">
         <h3>🐛 디버그 정보</h3>
@@ -113,6 +155,10 @@ const camera = ref<any>(null)
 const detectedGestures = ref<string[]>([])
 const handLandmarks = ref<any[]>([])
 const gestureCount = ref(0)
+const currentGesture = ref('')
+const lastGestureTime = ref(0)
+const gestureHoldTime = ref(0)
+const isPerformingAction = ref(false)
 
 // 상태 계산
 const cameraStatus = computed(() => {
@@ -143,11 +189,53 @@ const gazeStatus = computed(() => {
   }
 })
 
-// 손 제스처 분석 함수
-const analyzeGesture = (landmarks: any) => {
+// 마우스 제어 함수들
+const simulateMouseMove = (x: number, y: number) => {
+  // 웹에서는 직접적인 마우스 제어가 불가능하므로 시뮬레이션
+  console.log(`🖱️ 마우스 이동: (${Math.round(x)}, ${Math.round(y)})`)
+  
+  // 화면에 커서 위치 표시용 이벤트 발생
+  const event = new CustomEvent('gesture-mouse-move', {
+    detail: { x, y }
+  })
+  window.dispatchEvent(event)
+}
+
+const simulateClick = (button: 'left' | 'right' = 'left') => {
+  console.log(`🖱️ ${button} 클릭 시뮬레이션`)
+  isPerformingAction.value = true
+  
+  setTimeout(() => {
+    isPerformingAction.value = false
+  }, 500)
+  
+  // 실제 클릭 이벤트 발생
+  const event = new CustomEvent('gesture-click', {
+    detail: { button }
+  })
+  window.dispatchEvent(event)
+}
+
+const simulateScroll = (direction: 'up' | 'down') => {
+  console.log(`📜 스크롤 ${direction === 'up' ? '위로' : '아래로'}`)
+  isPerformingAction.value = true
+  
+  setTimeout(() => {
+    isPerformingAction.value = false
+  }, 300)
+  
+  // 실제 스크롤 이벤트 발생
+  window.scrollBy(0, direction === 'up' ? -100 : 100)
+}
+
+// 손 제스처 분석 및 액션 실행 함수
+const analyzeGestureAndPerformAction = (landmarks: any) => {
   const gestures: string[] = []
   
-  if (!landmarks || landmarks.length === 0) return gestures
+  if (!landmarks || landmarks.length === 0) {
+    currentGesture.value = ''
+    return gestures
+  }
   
   const hand = landmarks[0]
   
@@ -169,25 +257,99 @@ const analyzeGesture = (landmarks: any) => {
   
   const upFingerCount = fingersUp.filter(Boolean).length
   
-  // 제스처 인식
-  if (upFingerCount === 0) {
-    gestures.push('주먹 ✊')
-  } else if (upFingerCount === 1 && fingersUp[1]) {
-    gestures.push('검지 👆')
+  // 손목 위치 (마우스 커서 제어용)
+  const wrist = hand[0]
+  const indexTip = hand[8] // 검지 끝
+  
+  // 화면 좌표로 변환 (0~1 범위를 화면 크기로 변환)
+  const screenX = indexTip.x * window.innerWidth
+  const screenY = indexTip.y * window.innerHeight
+  
+  let detectedGesture = ''
+  
+  // 제스처 인식 및 액션
+  if (upFingerCount === 1 && fingersUp[1]) {
+    // 검지만 펼침 - 마우스 포인터 모드
+    detectedGesture = '마우스 포인터 👆'
+    gestures.push(detectedGesture)
+    simulateMouseMove(screenX, screenY)
+    
+  } else if (upFingerCount === 0) {
+    // 주먹 - 좌클릭
+    detectedGesture = '좌클릭 ✊'
+    gestures.push(detectedGesture)
+    
+    if (currentGesture.value === detectedGesture) {
+      gestureHoldTime.value += 1
+      if (gestureHoldTime.value === 10) { // 약 0.3초 유지 시
+        simulateClick('left')
+      }
+    } else {
+      gestureHoldTime.value = 0
+    }
+    
   } else if (upFingerCount === 2 && fingersUp[1] && fingersUp[2]) {
-    gestures.push('브이 ✌️')
+    // 브이 - 우클릭
+    detectedGesture = '우클릭 ✌️'
+    gestures.push(detectedGesture)
+    
+    if (currentGesture.value === detectedGesture) {
+      gestureHoldTime.value += 1
+      if (gestureHoldTime.value === 10) {
+        simulateClick('right')
+      }
+    } else {
+      gestureHoldTime.value = 0
+    }
+    
   } else if (upFingerCount === 5) {
-    gestures.push('손바닥 ✋')
+    // 손바닥 - 스크롤 모드
+    detectedGesture = '스크롤 모드 ✋'
+    gestures.push(detectedGesture)
+    
+    // 손의 세로 위치로 스크롤 방향 결정
+    if (wrist.y < 0.3) {
+      gestures.push('위로 스크롤')
+      if (currentGesture.value === detectedGesture) {
+        gestureHoldTime.value += 1
+        if (gestureHoldTime.value === 15) { // 약 0.5초 유지 시
+          simulateScroll('up')
+          gestureHoldTime.value = 0
+        }
+      }
+    } else if (wrist.y > 0.7) {
+      gestures.push('아래로 스크롤')
+      if (currentGesture.value === detectedGesture) {
+        gestureHoldTime.value += 1
+        if (gestureHoldTime.value === 15) {
+          simulateScroll('down')
+          gestureHoldTime.value = 0
+        }
+      }
+    }
+    
   } else if (upFingerCount === 3 && fingersUp[0] && fingersUp[1] && fingersUp[4]) {
-    gestures.push('아이러브유 🤟')
+    // 아이러브유 - 특수 기능 (ESC)
+    detectedGesture = 'ESC 키 🤟'
+    gestures.push(detectedGesture)
+    
+    if (currentGesture.value === detectedGesture) {
+      gestureHoldTime.value += 1
+      if (gestureHoldTime.value === 20) { // 약 0.7초 유지 시
+        console.log('⌨️ ESC 키 눌림')
+        // ESC 키 시뮬레이션
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        gestureHoldTime.value = 0
+      }
+    } else {
+      gestureHoldTime.value = 0
+    }
   }
   
-  // 손의 위치도 분석
-  const wrist = hand[0]
-  if (wrist.y < 0.3) {
-    gestures.push('위쪽 위치')
-  } else if (wrist.y > 0.7) {
-    gestures.push('아래쪽 위치')
+  // 제스처 변경 감지
+  if (currentGesture.value !== detectedGesture) {
+    currentGesture.value = detectedGesture
+    gestureHoldTime.value = 0
   }
   
   return gestures
@@ -309,24 +471,54 @@ const initializeMediaPipe = async () => {
               drawHandLandmarks(ctx, landmarks)
             }
             
-            // 제스처 분석
-            const gestures = analyzeGesture(results.multiHandLandmarks)
+            // 제스처 분석 및 액션 실행
+            const gestures = analyzeGestureAndPerformAction(results.multiHandLandmarks)
             detectedGestures.value = gestures
             
             if (gestures.length > 0) {
-              console.log(`🖐️ 감지된 제스처: ${gestures.join(', ')}`)
-              console.log(`📊 총 인식 횟수: ${gestureCount.value}`)
+              console.log(`🖐️ 현재 제스처: ${gestures.join(', ')}`)
+              console.log(`⏱️ 유지 시간: ${gestureHoldTime.value}/10`)
+              if (gestureCount.value % 30 === 0) { // 1초마다 한 번
+                console.log(`📊 총 인식 횟수: ${gestureCount.value}`)
+              }
             }
             
-            // 화면에 제스처 정보 표시
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-            ctx.fillRect(10, 10, 350, 80)
+            // 화면에 제스처 정보 및 액션 상태 표시
+            const bgColor = isPerformingAction.value ? 'rgba(255, 200, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)'
+            ctx.fillStyle = bgColor
+            ctx.fillRect(10, 10, 450, 120)
+            
+            // 테두리 그리기
+            ctx.strokeStyle = isPerformingAction.value ? '#ff6600' : '#333'
+            ctx.lineWidth = 2
+            ctx.strokeRect(10, 10, 450, 120)
+            
             ctx.fillStyle = 'black'
-            ctx.font = 'bold 16px Arial'
-            ctx.fillText(`🖐️ 인식된 제스처: ${gestures.join(', ')}`, 15, 35)
+            ctx.font = 'bold 18px Arial'
+            ctx.fillText(`🖐️ 현재 제스처: ${gestures.join(', ')}`, 15, 35)
+            
+            ctx.font = '16px Arial'
+            if (gestureHoldTime.value > 0) {
+              const progress = Math.round((gestureHoldTime.value / 20) * 100)
+              ctx.fillText(`⏱️ 액션 진행도: ${progress}%`, 15, 60)
+              
+              // 진행바 그리기
+              ctx.fillStyle = '#007bff'
+              ctx.fillRect(15, 70, progress * 3, 10)
+              ctx.strokeStyle = '#333'
+              ctx.strokeRect(15, 70, 300, 10)
+            }
+            
+            ctx.fillStyle = 'black'
             ctx.font = '14px Arial'
-            ctx.fillText(`📊 감지 횟수: ${gestureCount.value}`, 15, 55)
-            ctx.fillText(`👥 감지된 손: ${results.multiHandLandmarks.length}개`, 15, 75)
+            ctx.fillText(`👥 감지된 손: ${results.multiHandLandmarks.length}개`, 15, 100)
+            ctx.fillText(`🎯 총 처리: ${gestureCount.value}회`, 15, 115)
+            
+            if (isPerformingAction.value) {
+              ctx.fillStyle = 'red'
+              ctx.font = 'bold 16px Arial'
+              ctx.fillText('🔥 액션 실행 중!', 320, 35)
+            }
           } else {
             handLandmarks.value = []
             detectedGestures.value = []
@@ -646,6 +838,56 @@ onUnmounted(() => {
   color: var(--text-color);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.gesture-guide {
+  background: var(--bg-color);
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-top: 2rem;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--primary-color);
+}
+
+.gesture-guide h3 {
+  margin-bottom: 1.5rem;
+  color: var(--text-color);
+  text-align: center;
+}
+
+.gesture-instructions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.gesture-icon {
+  font-size: 2rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.instruction-text strong {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.instruction-text p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .camera-icon {

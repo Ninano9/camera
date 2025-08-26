@@ -89,6 +89,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 
+// MediaPipe 전역 타입 선언
+declare global {
+  interface Window {
+    Hands: any
+    Camera: any
+  }
+}
+
 // 반응형 상태
 const videoElement = ref<HTMLVideoElement | null>(null)
 const canvasElement = ref<HTMLCanvasElement | null>(null)
@@ -185,18 +193,75 @@ const analyzeGesture = (landmarks: any) => {
   return gestures
 }
 
+// CDN 스크립트 로드 함수
+const loadScript = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve()
+      return
+    }
+    
+    const script = document.createElement('script')
+    script.src = src
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`))
+    document.head.appendChild(script)
+  })
+}
+
+// 손 랜드마크 연결선 그리기
+const drawHandConnections = (ctx: CanvasRenderingContext2D, landmarks: any[], connections: number[][]) => {
+  ctx.strokeStyle = '#00FF00'
+  ctx.lineWidth = 2
+  
+  for (const connection of connections) {
+    const start = landmarks[connection[0]]
+    const end = landmarks[connection[1]]
+    
+    ctx.beginPath()
+    ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height)
+    ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height)
+    ctx.stroke()
+  }
+}
+
+// 손 랜드마크 포인트 그리기
+const drawHandLandmarks = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
+  ctx.fillStyle = '#FF0000'
+  
+  for (const landmark of landmarks) {
+    const x = landmark.x * ctx.canvas.width
+    const y = landmark.y * ctx.canvas.height
+    
+    ctx.beginPath()
+    ctx.arc(x, y, 3, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+}
+
 // MediaPipe 초기화
 const initializeMediaPipe = async () => {
   console.log('🤖 MediaPipe 손 인식 초기화 중...')
   
   try {
-    // 동적으로 MediaPipe 모듈 로드
-    const { Hands } = await import('@mediapipe/hands')
-    const { Camera } = await import('@mediapipe/camera_utils')
-    const { drawConnectors, drawLandmarks } = await import('@mediapipe/drawing_utils')
+    // CDN 스크립트 로드
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js')
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js')
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js')
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js')
+    
+    console.log('📦 MediaPipe 스크립트 로드 완료')
+    
+    // @ts-ignore - MediaPipe 전역 객체 사용
+    const Hands = window.Hands
+    const Camera = window.Camera
+    
+    if (!Hands || !Camera) {
+      throw new Error('MediaPipe 모듈을 찾을 수 없습니다.')
+    }
     
     hands.value = new Hands({
-      locateFile: (file) => {
+      locateFile: (file: string) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
       }
     })
@@ -208,7 +273,16 @@ const initializeMediaPipe = async () => {
       minTrackingConfidence: 0.5
     })
     
-    hands.value.onResults((results) => {
+    // 손 연결선 정의 (MediaPipe HAND_CONNECTIONS)
+    const HAND_CONNECTIONS = [
+      [0, 1], [1, 2], [2, 3], [3, 4],        // 엄지
+      [0, 5], [5, 6], [6, 7], [7, 8],        // 검지
+      [0, 17], [5, 9], [9, 10], [10, 11], [11, 12], // 중지
+      [9, 13], [13, 14], [14, 15], [15, 16], // 약지
+      [13, 17], [17, 18], [18, 19], [19, 20] // 소지
+    ]
+    
+    hands.value.onResults((results: any) => {
       if (canvasElement.value && videoElement.value) {
         const canvas = canvasElement.value
         const video = videoElement.value
@@ -229,17 +303,10 @@ const initializeMediaPipe = async () => {
             // 각 손에 대해 랜드마크 그리기
             for (const landmarks of results.multiHandLandmarks) {
               // 손 연결선 그리기
-              drawConnectors(ctx, landmarks, Hands.HAND_CONNECTIONS, {
-                color: '#00FF00',
-                lineWidth: 2
-              })
+              drawHandConnections(ctx, landmarks, HAND_CONNECTIONS)
               
               // 손 관절점 그리기
-              drawLandmarks(ctx, landmarks, {
-                color: '#FF0000',
-                lineWidth: 1,
-                radius: 3
-              })
+              drawHandLandmarks(ctx, landmarks)
             }
             
             // 제스처 분석
@@ -252,15 +319,24 @@ const initializeMediaPipe = async () => {
             }
             
             // 화면에 제스처 정보 표시
-            ctx.fillStyle = 'white'
-            ctx.font = '16px Arial'
-            ctx.fillRect(10, 10, 300, 60)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+            ctx.fillRect(10, 10, 350, 80)
             ctx.fillStyle = 'black'
-            ctx.fillText(`인식된 제스처: ${gestures.join(', ')}`, 15, 30)
-            ctx.fillText(`감지 횟수: ${gestureCount.value}`, 15, 50)
+            ctx.font = 'bold 16px Arial'
+            ctx.fillText(`🖐️ 인식된 제스처: ${gestures.join(', ')}`, 15, 35)
+            ctx.font = '14px Arial'
+            ctx.fillText(`📊 감지 횟수: ${gestureCount.value}`, 15, 55)
+            ctx.fillText(`👥 감지된 손: ${results.multiHandLandmarks.length}개`, 15, 75)
           } else {
             handLandmarks.value = []
             detectedGestures.value = []
+            
+            // 손이 감지되지 않았을 때 메시지
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+            ctx.fillRect(10, 10, 250, 40)
+            ctx.fillStyle = 'black'
+            ctx.font = '16px Arial'
+            ctx.fillText('👋 손을 카메라 앞에 올려주세요', 15, 30)
           }
         }
       }
@@ -285,7 +361,7 @@ const initializeMediaPipe = async () => {
     
   } catch (error) {
     console.error('❌ MediaPipe 초기화 실패:', error)
-    errorMessage.value = 'MediaPipe 초기화에 실패했습니다.'
+    errorMessage.value = `MediaPipe 초기화 실패: ${(error as Error).message}`
   }
 }
 

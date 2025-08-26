@@ -843,16 +843,24 @@ const initializeMediaPipe = async () => {
       }
     })
     
-    // 수동 프레임 처리 방식으로 변경 (Camera 객체 대신)
-    if (videoElement.value) {
-      console.log('📷 수동 프레임 처리 방식으로 MediaPipe 연결 중...')
+    // DOM에서 직접 비디오 엘리먼트 가져오기 (Vue 시스템 완전 우회)
+    const videoElements = document.querySelectorAll('video')
+    const nativeVideoElement = videoElements[0] as HTMLVideoElement
+    
+    if (nativeVideoElement) {
+      console.log('📷 DOM에서 직접 비디오 엘리먼트 가져오기 성공')
+      console.log('📐 네이티브 비디오 크기:', nativeVideoElement.videoWidth, 'x', nativeVideoElement.videoHeight)
       
-      // 원시 비디오 엘리먼트 참조 저장 (Vue 반응형 시스템 우회)
-      const rawVideoElement = toRaw(videoElement.value)
       let frameCount = 0
       let isProcessing = false
       
-      // 수동 프레임 처리 함수
+      // Canvas 생성 방식도 변경 (MediaPipe용 임시 캔버스)
+      const tempCanvas = document.createElement('canvas')
+      tempCanvas.width = 640
+      tempCanvas.height = 480
+      const tempCtx = tempCanvas.getContext('2d')
+      
+      // 수동 프레임 처리 함수 (완전히 네이티브 방식)
       const processFrame = async () => {
         if (!isGestureActive.value || !hands.value || isProcessing) {
           return
@@ -863,12 +871,12 @@ const initializeMediaPipe = async () => {
         
         try {
           // 비디오 상태 체크
-          if (rawVideoElement.videoWidth === 0 || rawVideoElement.videoHeight === 0) {
+          if (nativeVideoElement.videoWidth === 0 || nativeVideoElement.videoHeight === 0) {
             if (frameCount % 30 === 0) {
-              console.warn('⚠️ 비디오 크기가 0입니다:', {
-                videoWidth: rawVideoElement.videoWidth,
-                videoHeight: rawVideoElement.videoHeight,
-                readyState: rawVideoElement.readyState
+              console.warn('⚠️ 네이티브 비디오 크기가 0입니다:', {
+                videoWidth: nativeVideoElement.videoWidth,
+                videoHeight: nativeVideoElement.videoHeight,
+                readyState: nativeVideoElement.readyState
               })
             }
             isProcessing = false
@@ -877,38 +885,41 @@ const initializeMediaPipe = async () => {
           }
           
           // 추가 안전성 체크
-          if (rawVideoElement.readyState < 2) { // HAVE_CURRENT_DATA
+          if (nativeVideoElement.readyState < 2) { // HAVE_CURRENT_DATA
             if (frameCount % 30 === 0) {
-              console.warn('⚠️ 비디오가 아직 준비되지 않음:', rawVideoElement.readyState)
+              console.warn('⚠️ 네이티브 비디오가 아직 준비되지 않음:', nativeVideoElement.readyState)
             }
             isProcessing = false
             requestAnimationFrame(processFrame)
             return
           }
           
-          // MediaPipe에 프레임 전송 (원시 엘리먼트 직접 사용)
-          await hands.value.send({ image: rawVideoElement })
-          
-          // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
-          if (frameCount <= 5 || frameCount % 100 === 0) {
-            console.log(`📸 수동 프레임 처리: ${frameCount}번째`)
-            console.log(`📐 비디오 크기: ${rawVideoElement.videoWidth}x${rawVideoElement.videoHeight}`)
+          // 임시 캔버스에 비디오 프레임 그리기
+          if (tempCtx) {
+            tempCtx.drawImage(nativeVideoElement, 0, 0, tempCanvas.width, tempCanvas.height)
+            
+            // MediaPipe에 캔버스 전송 (비디오 대신 캔버스 사용)
+            await hands.value.send({ image: tempCanvas })
+            
+            // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
+            if (frameCount <= 5 || frameCount % 100 === 0) {
+              console.log(`📸 캔버스 프레임 처리: ${frameCount}번째`)
+              console.log(`📐 네이티브 비디오 크기: ${nativeVideoElement.videoWidth}x${nativeVideoElement.videoHeight}`)
+              console.log(`🎨 캔버스 크기: ${tempCanvas.width}x${tempCanvas.height}`)
+            }
           }
           
         } catch (frameError) {
-          console.error('⚠️ 프레임 처리 오류:', frameError)
+          console.error('⚠️ 캔버스 프레임 처리 오류:', frameError)
           
-          // 심각한 오류 시 잠시 대기
-          if (frameError.message.includes('proxy') || frameError.message.includes('$$')) {
-            console.log('🔄 프록시 오류 감지 - 1초 대기 후 재시도')
-            setTimeout(() => {
-              isProcessing = false
-              if (isGestureActive.value) {
-                requestAnimationFrame(processFrame)
-              }
-            }, 1000)
-            return
-          }
+          // 오류 발생 시 잠시 대기
+          setTimeout(() => {
+            isProcessing = false
+            if (isGestureActive.value) {
+              requestAnimationFrame(processFrame)
+            }
+          }, 100) // 더 짧은 대기 시간
+          return
         }
         
         isProcessing = false
@@ -920,7 +931,7 @@ const initializeMediaPipe = async () => {
       }
       
       // 프레임 처리 시작
-      console.log('🎬 수동 프레임 처리 시작...')
+      console.log('🎬 캔버스 기반 프레임 처리 시작...')
       requestAnimationFrame(processFrame)
       
       // camera.value를 null로 설정 (Camera 객체 사용하지 않음)
@@ -929,11 +940,11 @@ const initializeMediaPipe = async () => {
         stop: () => Promise.resolve()
       }
       
-      console.log('📹 수동 프레임 처리 연결 완료')
-      console.log('🎬 처리 해상도: 1280x720')
+      console.log('📹 캔버스 기반 프레임 처리 연결 완료')
+      console.log('🎬 처리 해상도: 640x480')
       
     } else {
-      throw new Error('❌ 비디오 엘리먼트가 준비되지 않음')
+      throw new Error('❌ DOM에서 비디오 엘리먼트를 찾을 수 없음')
     }
     
     console.log('✅ MediaPipe 손 인식 초기화 완료!')

@@ -147,22 +147,55 @@ const startCamera = async () => {
     })
     
     console.log('✅ 카메라 스트림 획득 성공:', mediaStream)
+    console.log('🔍 비디오 트랙 정보:', mediaStream.getVideoTracks())
     stream.value = mediaStream
     
     // 비디오 엘리먼트에 스트림 연결
     if (videoElement.value) {
+      console.log('📺 비디오 엘리먼트 찾음:', videoElement.value)
       videoElement.value.srcObject = mediaStream
-      await videoElement.value.play()
-      console.log('✅ 비디오 재생 시작')
       
-      isCameraActive.value = true
-      debugInfo.value = `
+      // 여러 이벤트 리스너 추가
+      videoElement.value.addEventListener('loadedmetadata', () => {
+        console.log('✅ 비디오 메타데이터 로드 완료')
+        console.log(`📐 비디오 해상도: ${videoElement.value!.videoWidth}x${videoElement.value!.videoHeight}`)
+      })
+      
+      videoElement.value.addEventListener('loadeddata', () => {
+        console.log('✅ 비디오 데이터 로드 완료')
+        isCameraActive.value = true
+        debugInfo.value = `
 카메라 정보:
-- 해상도: ${videoElement.value.videoWidth}x${videoElement.value.videoHeight}
+- 해상도: ${videoElement.value!.videoWidth}x${videoElement.value!.videoHeight}
 - 스트림 ID: ${mediaStream.id}
 - 트랙 수: ${mediaStream.getVideoTracks().length}
 - 활성 상태: ${mediaStream.active}
-      `.trim()
+- 비디오 준비 상태: ${videoElement.value!.readyState}
+- 재생 상태: ${!videoElement.value!.paused}
+        `.trim()
+      })
+      
+      videoElement.value.addEventListener('canplay', () => {
+        console.log('✅ 비디오 재생 가능')
+      })
+      
+      videoElement.value.addEventListener('playing', () => {
+        console.log('✅ 비디오 재생 중')
+      })
+      
+      videoElement.value.addEventListener('error', (e) => {
+        console.error('❌ 비디오 에러:', e)
+      })
+      
+      await videoElement.value.play()
+      console.log('✅ 비디오 재생 시작 명령 완료')
+      console.log('🔍 비디오 엘리먼트 상태:')
+      console.log('  - paused:', videoElement.value.paused)
+      console.log('  - readyState:', videoElement.value.readyState)
+      console.log('  - videoWidth:', videoElement.value.videoWidth)
+      console.log('  - videoHeight:', videoElement.value.videoHeight)
+    } else {
+      console.error('❌ 비디오 엘리먼트를 찾을 수 없음')
     }
     
   } catch (error) {
@@ -269,6 +302,10 @@ onUnmounted(() => {
   background: #000;
   display: block;
   margin: 0 auto;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  min-height: 400px;
+  object-fit: cover;
 }
 
 .camera-canvas {

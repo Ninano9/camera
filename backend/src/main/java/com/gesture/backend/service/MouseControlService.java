@@ -14,6 +14,7 @@ public class MouseControlService {
     private final Robot robot;
     private final Map<String, Long> lastActionTime = new ConcurrentHashMap<>();
     private final long ACTION_COOLDOWN = 100; // 100ms 쿨다운
+    private final boolean isHeadless;
     
     // 마우스 위치 스무딩을 위한 변수들
     private int lastX = 0;
@@ -21,16 +22,26 @@ public class MouseControlService {
     private final double SMOOTHING_FACTOR = 0.3;
     
     public MouseControlService() {
-        try {
-            this.robot = new Robot();
-            robot.setAutoDelay(10); // 10ms 딜레이
-            
-            // 화면 크기 가져오기
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            System.out.println("🖥️ 화면 크기: " + screenSize.width + "x" + screenSize.height);
-            System.out.println("✅ MouseControlService 초기화 완료");
-        } catch (AWTException e) {
-            throw new RuntimeException("❌ Robot 클래스 초기화 실패: " + e.getMessage(), e);
+        // 헤드리스 환경 체크
+        this.isHeadless = GraphicsEnvironment.isHeadless();
+        
+        if (isHeadless) {
+            System.out.println("⚠️ 헤드리스 환경 감지 - GUI 기능 비활성화");
+            this.robot = null;
+        } else {
+            try {
+                // GUI 환경에서만 Robot 초기화
+                this.robot = new Robot();
+                robot.setAutoDelay(10); // 10ms 딜레이
+                
+                // 화면 크기 가져오기
+                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+                System.out.println("🖥️ 화면 크기: " + screenSize.width + "x" + screenSize.height);
+                System.out.println("✅ MouseControlService 초기화 완료");
+            } catch (AWTException e) {
+                System.err.println("❌ Robot 클래스 초기화 실패: " + e.getMessage());
+                throw new RuntimeException("❌ Robot 클래스 초기화 실패: " + e.getMessage(), e);
+            }
         }
     }
     
@@ -38,6 +49,11 @@ public class MouseControlService {
      * 마우스 위치 이동 (스무딩 적용)
      */
     public void moveMouseSmooth(int x, int y) {
+        if (isHeadless || robot == null) {
+            System.out.println("🖱️ 헤드리스 환경 - 마우스 이동 시뮬레이션: (" + x + ", " + y + ")");
+            return;
+        }
+        
         try {
             // 스무딩 적용
             int smoothedX = (int) (lastX + (x - lastX) * SMOOTHING_FACTOR);
@@ -58,6 +74,11 @@ public class MouseControlService {
      * 마우스 위치 이동 (즉시)
      */
     public void moveMouse(int x, int y) {
+        if (isHeadless || robot == null) {
+            System.out.println("🖱️ 헤드리스 환경 - 마우스 이동 시뮬레이션: (" + x + ", " + y + ")");
+            return;
+        }
+        
         try {
             robot.mouseMove(x, y);
             lastX = x;
@@ -72,6 +93,11 @@ public class MouseControlService {
      * 좌클릭
      */
     public CompletableFuture<Void> leftClick() {
+        if (isHeadless || robot == null) {
+            System.out.println("🖱️ 헤드리스 환경 - 좌클릭 시뮬레이션");
+            return CompletableFuture.completedFuture(null);
+        }
+        
         return performClickAction("leftClick", () -> {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.delay(50);
@@ -84,6 +110,11 @@ public class MouseControlService {
      * 우클릭
      */
     public CompletableFuture<Void> rightClick() {
+        if (isHeadless || robot == null) {
+            System.out.println("🖱️ 헤드리스 환경 - 우클릭 시뮬레이션");
+            return CompletableFuture.completedFuture(null);
+        }
+        
         return performClickAction("rightClick", () -> {
             robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             robot.delay(50);
@@ -96,6 +127,11 @@ public class MouseControlService {
      * 더블클릭
      */
     public CompletableFuture<Void> doubleClick() {
+        if (isHeadless || robot == null) {
+            System.out.println("🖱️ 헤드리스 환경 - 더블클릭 시뮬레이션");
+            return CompletableFuture.completedFuture(null);
+        }
+        
         return performClickAction("doubleClick", () -> {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.delay(50);
@@ -112,6 +148,11 @@ public class MouseControlService {
      * 스크롤
      */
     public void scroll(String direction, int amount) {
+        if (isHeadless || robot == null) {
+            System.out.println("📜 헤드리스 환경 - 스크롤 시뮬레이션: " + direction + " (양: " + amount + ")");
+            return;
+        }
+        
         try {
             if (!canPerformAction("scroll")) return;
             
@@ -129,6 +170,11 @@ public class MouseControlService {
      * 키보드 입력
      */
     public void pressKey(int keyCode) {
+        if (isHeadless || robot == null) {
+            System.out.println("⌨️ 헤드리스 환경 - 키 입력 시뮬레이션: " + KeyEvent.getKeyText(keyCode));
+            return;
+        }
+        
         try {
             if (!canPerformAction("keyPress")) return;
             
@@ -147,6 +193,11 @@ public class MouseControlService {
      * 키 조합 (Ctrl+C, Ctrl+V 등)
      */
     public void pressKeyCombo(int... keyCodes) {
+        if (isHeadless || robot == null) {
+            System.out.println("⌨️ 헤드리스 환경 - 키 조합 시뮬레이션");
+            return;
+        }
+        
         try {
             if (!canPerformAction("keyCombo")) return;
             
@@ -175,6 +226,10 @@ public class MouseControlService {
      * 화면 해상도 가져오기
      */
     public Dimension getScreenSize() {
+        if (isHeadless) {
+            System.out.println("🖥️ 헤드리스 환경 - 기본 화면 크기 반환: 1920x1080");
+            return new Dimension(1920, 1080);
+        }
         return Toolkit.getDefaultToolkit().getScreenSize();
     }
     
@@ -182,6 +237,10 @@ public class MouseControlService {
      * 현재 마우스 위치 가져오기
      */
     public Point getCurrentMousePosition() {
+        if (isHeadless) {
+            System.out.println("🖱️ 헤드리스 환경 - 기본 마우스 위치 반환: (0, 0)");
+            return new Point(0, 0);
+        }
         return MouseInfo.getPointerInfo().getLocation();
     }
     

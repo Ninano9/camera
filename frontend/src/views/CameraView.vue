@@ -48,7 +48,6 @@
           <canvas 
             ref="canvasElement" 
             class="camera-canvas"
-            v-show="false"
           ></canvas>
           
           <div class="camera-controls">
@@ -89,6 +88,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { Hands } from '@mediapipe/hands'
+import { Camera } from '@mediapipe/camera_utils'
+import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 
 // 반응형 상태
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -99,6 +101,13 @@ const isGestureActive = ref(false)
 const errorMessage = ref('')
 const stream = ref<MediaStream | null>(null)
 const debugInfo = ref('')
+
+// MediaPipe 관련 상태
+const hands = ref<Hands | null>(null)
+const camera = ref<Camera | null>(null)
+const detectedGestures = ref<string[]>([])
+const handLandmarks = ref<any[]>([])
+const gestureCount = ref(0)
 
 // 상태 계산
 const cameraStatus = computed(() => {
@@ -128,6 +137,134 @@ const gazeStatus = computed(() => {
     return { text: '비활성', class: 'pending' }
   }
 })
+
+// 손 제스처 분석 함수
+const analyzeGesture = (landmarks: any) => {
+  const gestures: string[] = []
+  
+  if (!landmarks || landmarks.length === 0) return gestures
+  
+  const hand = landmarks[0]
+  
+  // 손가락 끝점과 관절점 인덱스
+  const fingerTips = [4, 8, 12, 16, 20] // 엄지, 검지, 중지, 약지, 소지
+  const fingerMcps = [2, 5, 9, 13, 17] // 각 손가락의 기준점
+  
+  // 손가락이 펴져있는지 확인
+  const isFingerUp = (tipIndex: number, mcpIndex: number) => {
+    if (tipIndex === 4) { // 엄지는 다르게 처리
+      return hand[tipIndex].x > hand[tipIndex - 1].x
+    }
+    return hand[tipIndex].y < hand[mcpIndex].y
+  }
+  
+  const fingersUp = fingerTips.map((tip, index) => 
+    isFingerUp(tip, fingerMcps[index])
+  )
+  
+  const upFingerCount = fingersUp.filter(Boolean).length
+  
+  // 제스처 인식
+  if (upFingerCount === 0) {
+    gestures.push('주먹 ✊')
+  } else if (upFingerCount === 1 && fingersUp[1]) {
+    gestures.push('검지 👆')
+  } else if (upFingerCount === 2 && fingersUp[1] && fingersUp[2]) {
+    gestures.push('브이 ✌️')
+  } else if (upFingerCount === 5) {
+    gestures.push('손바닥 ✋')
+  } else if (upFingerCount === 3 && fingersUp[0] && fingersUp[1] && fingersUp[4]) {
+    gestures.push('아이러브유 🤟')
+  }
+  
+  // 손의 위치도 분석
+  const wrist = hand[0]
+  if (wrist.y < 0.3) {
+    gestures.push('위쪽 위치')
+  } else if (wrist.y > 0.7) {
+    gestures.push('아래쪽 위치')
+  }
+  
+  return gestures
+}
+
+// MediaPipe 초기화
+const initializeMediaPipe = () => {
+  console.log('🤖 MediaPipe 손 인식 초기화 중...')
+  
+  hands.value = new Hands({
+    locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    }
+  })
+  
+  hands.value.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  })
+  
+  hands.value.onResults((results) => {
+    if (canvasElement.value && videoElement.value) {
+      const canvas = canvasElement.value
+      const video = videoElement.value
+      const ctx = canvas.getContext('2d')
+      
+      if (ctx) {
+        // 캔버스 크기 조정
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        
+        // 캔버스 클리어
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          handLandmarks.value = results.multiHandLandmarks
+          gestureCount.value++
+          
+          // 각 손에 대해 랜드마크 그리기
+          for (const landmarks of results.multiHandLandmarks) {
+            // 손 연결선 그리기
+            drawConnectors(ctx, landmarks, Hands.HAND_CONNECTIONS, {
+              color: '#00FF00',
+              lineWidth: 2
+            })
+            
+            // 손 관절점 그리기
+            drawLandmarks(ctx, landmarks, {
+              color: '#FF0000',
+              lineWidth: 1,
+              radius: 3
+            })
+          }
+          
+          // 제스처 분석
+          const gestures = analyzeGesture(results.multiHandLandmarks)
+          detectedGestures.value = gestures
+          
+          if (gestures.length > 0) {
+            console.log(`🖐️ 감지된 제스처: ${gestures.join(', ')}`)
+            console.log(`📊 총 인식 횟수: ${gestureCount.value}`)
+          }
+          
+          // 화면에 제스처 정보 표시
+          ctx.fillStyle = 'white'
+          ctx.font = '16px Arial'
+          ctx.fillRect(10, 10, 300, 60)
+          ctx.fillStyle = 'black'
+          ctx.fillText(`인식된 제스처: ${gestures.join(', ')}`, 15, 30)
+          ctx.fillText(`감지 횟수: ${gestureCount.value}`, 15, 50)
+        } else {
+          handLandmarks.value = []
+          detectedGestures.value = []
+        }
+      }
+    }
+  })
+  
+  console.log('✅ MediaPipe 손 인식 초기화 완료')
+}
 
 // 카메라 시작
 const startCamera = async () => {
@@ -253,17 +390,45 @@ const stopCamera = () => {
 }
 
 // 제스처 인식 토글
-const toggleGestureRecognition = () => {
+const toggleGestureRecognition = async () => {
   isGestureActive.value = !isGestureActive.value
   console.log(`${isGestureActive.value ? '▶️' : '⏸️'} 제스처 인식: ${isGestureActive.value ? '시작' : '정지'}`)
   
   if (isGestureActive.value) {
-    // TODO: MediaPipe 손 제스처 인식 시작
     console.log('🖐️ 손 제스처 인식 활성화')
-    console.log('👁️ 시선 추적 활성화')
+    
+    // MediaPipe 초기화
+    if (!hands.value) {
+      initializeMediaPipe()
+    }
+    
+    // 카메라와 MediaPipe 연결
+    if (videoElement.value && hands.value) {
+      camera.value = new Camera(videoElement.value, {
+        onFrame: async () => {
+          if (hands.value && videoElement.value) {
+            await hands.value.send({ image: videoElement.value })
+          }
+        },
+        width: 1280,
+        height: 720
+      })
+      
+      console.log('📹 MediaPipe 카메라 연결 완료')
+    }
   } else {
-    // TODO: 제스처 인식 정지
     console.log('🛑 제스처 인식 비활성화')
+    
+    // 캔버스 클리어
+    if (canvasElement.value) {
+      const ctx = canvasElement.value.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasElement.value.width, canvasElement.value.height)
+      }
+    }
+    
+    detectedGestures.value = []
+    handLandmarks.value = []
   }
 }
 
@@ -275,6 +440,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   console.log('🧹 카메라 뷰 언마운트 - 리소스 정리')
+  
+  // 제스처 인식 정리
+  if (isGestureActive.value) {
+    isGestureActive.value = false
+  }
+  
+  // MediaPipe 리소스 정리
+  if (hands.value) {
+    hands.value.close()
+  }
+  
+  // 카메라 정리
   stopCamera()
 })
 </script>
@@ -334,11 +511,16 @@ onUnmounted(() => {
 
 .camera-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  width: calc(100% - 2rem);
+  height: calc(100% - 2rem);
   pointer-events: none;
+  border-radius: 0.5rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .camera-controls {

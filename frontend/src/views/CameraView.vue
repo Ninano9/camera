@@ -452,8 +452,10 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
     currentGesture.value = detectedGesture
     gestureHoldTime.value = 0
     
-    // 제스처 변경 로그
-    console.log(`🔄 제스처 변경: ${detectedGesture}`)
+    // 중요한 제스처 실행 시에만 로그
+    if (detectedGesture.includes('실행!')) {
+      console.log(`🔄 제스처 실행: ${detectedGesture}`)
+    }
   }
   
   return gestures
@@ -699,26 +701,11 @@ const initializeMediaPipe = async () => {
       // 프레임 처리 카운터
       gestureCount.value++
       
-      // 첫 10프레임은 자주 로그, 이후엔 30프레임마다
-      const shouldLog = gestureCount.value <= 10 || gestureCount.value % 30 === 0
+      // 로그 최소화 - 처음 3번, 그 후 100번마다만
+      const shouldLog = gestureCount.value <= 3 || gestureCount.value % 100 === 0
       
       if (shouldLog) {
-        console.log(`📸 프레임 처리 중... ${gestureCount.value}번째`)
-        console.log('🔍 결과 상태:', {
-          hasResults: !!results,
-          hasMultiHandLandmarks: !!results?.multiHandLandmarks,
-          handCount: results?.multiHandLandmarks?.length || 0,
-          multiHandedness: results?.multiHandedness?.length || 0,
-          canvasElement: !!canvasElement.value,
-          videoElement: !!videoElement.value,
-          videoSize: `${videoElement.value?.videoWidth}x${videoElement.value?.videoHeight}`,
-          canvasSize: `${canvasElement.value?.width}x${canvasElement.value?.height}`
-        })
-        
-        // 결과 객체의 모든 속성 확인
-        if (results) {
-          console.log('📊 MediaPipe 결과 객체 속성:', Object.keys(results))
-        }
+        console.log(`📸 프레임 처리: ${gestureCount.value}번째`)
       }
       
       if (canvasElement.value && videoElement.value) {
@@ -757,12 +744,11 @@ const initializeMediaPipe = async () => {
               // 손 관절점 그리기
               drawHandLandmarks(ctx, landmarks)
               
-              // 손별 디버그 정보
-              if (gestureCount.value % 30 === 0) {
+              // 손별 디버그 정보 (매우 제한적)
+              if (gestureCount.value <= 2) {
                 console.log(`🖐️ 손 ${i + 1} 정보:`, {
                   landmarkCount: landmarks.length,
-                  wristPos: `(${Math.round(landmarks[0].x * 100)}%, ${Math.round(landmarks[0].y * 100)}%)`,
-                  confidence: landmarks[0].visibility || 'N/A'
+                  wristPos: `(${Math.round(landmarks[0].x * 100)}%, ${Math.round(landmarks[0].y * 100)}%)`
                 })
               }
             }
@@ -771,10 +757,7 @@ const initializeMediaPipe = async () => {
             const gestures = analyzeGestureAndPerformAction(results.multiHandLandmarks)
             detectedGestures.value = gestures
             
-            if (gestures.length > 0) {
-              console.log(`🖐️ 현재 제스처: ${gestures.join(', ')}`)
-              console.log(`⏱️ 유지 시간: ${gestureHoldTime.value}/20`)
-            }
+            // 제스처 로그를 제거하여 성능 최적화
             
             // 화면에 제스처 정보 및 액션 상태 표시
             const bgColor = isPerformingAction.value ? 'rgba(255, 200, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)'
@@ -865,7 +848,7 @@ const initializeMediaPipe = async () => {
       tempCanvas.height = 480
       const tempCtx = tempCanvas.getContext('2d')
       
-      // 수동 프레임 처리 함수 (완전히 네이티브 방식)
+      // 수동 프레임 처리 함수 (완전히 네이티브 방식) - 성능 최적화
       const processFrame = async () => {
         if (!isGestureActive.value || !nativeHands || isProcessing) {
           return
@@ -873,6 +856,13 @@ const initializeMediaPipe = async () => {
         
         isProcessing = true
         frameCount++
+        
+        // 프레임 건너뛰기로 성능 최적화 (3프레임마다 1번만 처리)
+        if (frameCount % 3 !== 0) {
+          isProcessing = false
+          requestAnimationFrame(processFrame)
+          return
+        }
         
         try {
           // 비디오 상태 체크
@@ -906,11 +896,9 @@ const initializeMediaPipe = async () => {
             // 네이티브 MediaPipe에 캔버스 전송 (프록시 없음)
             await nativeHands.send({ image: tempCanvas })
             
-            // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
-            if (frameCount <= 5 || frameCount % 100 === 0) {
-              console.log(`📸 네이티브 캔버스 프레임 처리: ${frameCount}번째`)
-              console.log(`📐 네이티브 비디오 크기: ${nativeVideoElement.videoWidth}x${nativeVideoElement.videoHeight}`)
-              console.log(`🎨 캔버스 크기: ${tempCanvas.width}x${tempCanvas.height}`)
+            // 프레임 전송 확인 (매우 제한적)
+            if (frameCount <= 2) {
+              console.log(`📸 프레임 처리: ${frameCount}번째`)
             }
           }
           

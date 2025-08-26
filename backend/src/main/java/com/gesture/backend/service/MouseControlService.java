@@ -24,7 +24,6 @@ public class MouseControlService {
         try {
             this.robot = new Robot();
             robot.setAutoDelay(10); // 10ms 딜레이
-            robot.setAutoRepeatOn(false);
             
             // 화면 크기 가져오기
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();

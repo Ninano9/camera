@@ -149,9 +149,11 @@ const errorMessage = ref('')
 const stream = ref<MediaStream | null>(null)
 const debugInfo = ref('')
 
-// MediaPipe 관련 상태
-const hands = ref<any>(null)
-const camera = ref<any>(null)
+// MediaPipe 관련 상태 (Vue 반응형 시스템 밖에서 관리)
+let nativeHands: any = null
+let nativeCamera: any = null
+const hands = ref<any>(null) // 표시용으로만 사용
+const camera = ref<any>(null) // 표시용으로만 사용
 const detectedGestures = ref<string[]>([])
 const handLandmarks = ref<any[]>([])
 const gestureCount = ref(0)
@@ -657,8 +659,8 @@ const initializeMediaPipe = async () => {
       throw new Error('MediaPipe 모듈을 찾을 수 없습니다.')
     }
     
-    console.log('🖐️ Hands 객체 생성 중...')
-    hands.value = new Hands({
+    console.log('🖐️ 네이티브 Hands 객체 생성 중...')
+    nativeHands = new Hands({
       locateFile: (file: string) => {
         const url = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         console.log(`📁 모델 파일 로드: ${file}`)
@@ -666,14 +668,17 @@ const initializeMediaPipe = async () => {
       }
     })
     
-    hands.value.setOptions({
+    nativeHands.setOptions({
       maxNumHands: 2,
       modelComplexity: 1,
       minDetectionConfidence: 0.3, // 더 낮은 임계값
       minTrackingConfidence: 0.3   // 더 낮은 임계값
     })
     
-    console.log('⚙️ Hands 설정 완료 (임계값: 0.3)')
+    // Vue ref는 표시용으로만 설정
+    hands.value = 'initialized'
+    
+    console.log('⚙️ 네이티브 Hands 설정 완료 (임계값: 0.3)')
     console.log('📊 Hands 설정 정보:', {
       maxNumHands: 2,
       modelComplexity: 1,
@@ -690,7 +695,7 @@ const initializeMediaPipe = async () => {
       [13, 17], [17, 18], [18, 19], [19, 20] // 소지
     ]
     
-    hands.value.onResults((results: any) => {
+    nativeHands.onResults((results: any) => {
       // 프레임 처리 카운터
       gestureCount.value++
       
@@ -862,7 +867,7 @@ const initializeMediaPipe = async () => {
       
       // 수동 프레임 처리 함수 (완전히 네이티브 방식)
       const processFrame = async () => {
-        if (!isGestureActive.value || !hands.value || isProcessing) {
+        if (!isGestureActive.value || !nativeHands || isProcessing) {
           return
         }
         
@@ -898,19 +903,19 @@ const initializeMediaPipe = async () => {
           if (tempCtx) {
             tempCtx.drawImage(nativeVideoElement, 0, 0, tempCanvas.width, tempCanvas.height)
             
-            // MediaPipe에 캔버스 전송 (비디오 대신 캔버스 사용)
-            await hands.value.send({ image: tempCanvas })
+            // 네이티브 MediaPipe에 캔버스 전송 (프록시 없음)
+            await nativeHands.send({ image: tempCanvas })
             
             // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
             if (frameCount <= 5 || frameCount % 100 === 0) {
-              console.log(`📸 캔버스 프레임 처리: ${frameCount}번째`)
+              console.log(`📸 네이티브 캔버스 프레임 처리: ${frameCount}번째`)
               console.log(`📐 네이티브 비디오 크기: ${nativeVideoElement.videoWidth}x${nativeVideoElement.videoHeight}`)
               console.log(`🎨 캔버스 크기: ${tempCanvas.width}x${tempCanvas.height}`)
             }
           }
           
         } catch (frameError) {
-          console.error('⚠️ 캔버스 프레임 처리 오류:', frameError)
+          console.error('⚠️ 네이티브 프레임 처리 오류:', frameError)
           
           // 오류 발생 시 잠시 대기
           setTimeout(() => {
@@ -1114,12 +1119,12 @@ const toggleGestureRecognition = async () => {
     
     try {
       // MediaPipe 초기화
-      if (!hands.value) {
-        console.log('🤖 MediaPipe 첫 초기화 시작...')
+      if (!nativeHands) {
+        console.log('🤖 네이티브 MediaPipe 첫 초기화 시작...')
         await initializeMediaPipe()
       } else {
-        console.log('♻️ 기존 MediaPipe 재사용')
-        console.log('📷 수동 프레임 처리가 이미 실행 중입니다.')
+        console.log('♻️ 기존 네이티브 MediaPipe 재사용')
+        console.log('📷 네이티브 프레임 처리가 이미 실행 중입니다.')
       }
       
       console.log('🎉 제스처 인식 시작 완료!')

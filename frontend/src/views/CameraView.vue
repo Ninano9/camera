@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 
 // 반응형 상태
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -150,6 +150,13 @@ const startCamera = async () => {
     console.log('🔍 비디오 트랙 정보:', mediaStream.getVideoTracks())
     stream.value = mediaStream
     
+    // 화면을 카메라 스트림으로 전환
+    isCameraActive.value = true
+    
+    // DOM 업데이트 완료까지 대기
+    await nextTick()
+    console.log('⏳ DOM 업데이트 완료 대기...')
+    
     // 비디오 엘리먼트에 스트림 연결
     if (videoElement.value) {
       console.log('📺 비디오 엘리먼트 찾음:', videoElement.value)
@@ -159,11 +166,7 @@ const startCamera = async () => {
       videoElement.value.addEventListener('loadedmetadata', () => {
         console.log('✅ 비디오 메타데이터 로드 완료')
         console.log(`📐 비디오 해상도: ${videoElement.value!.videoWidth}x${videoElement.value!.videoHeight}`)
-      })
-      
-      videoElement.value.addEventListener('loadeddata', () => {
-        console.log('✅ 비디오 데이터 로드 완료')
-        isCameraActive.value = true
+        
         debugInfo.value = `
 카메라 정보:
 - 해상도: ${videoElement.value!.videoWidth}x${videoElement.value!.videoHeight}
@@ -171,8 +174,11 @@ const startCamera = async () => {
 - 트랙 수: ${mediaStream.getVideoTracks().length}
 - 활성 상태: ${mediaStream.active}
 - 비디오 준비 상태: ${videoElement.value!.readyState}
-- 재생 상태: ${!videoElement.value!.paused}
         `.trim()
+      })
+      
+      videoElement.value.addEventListener('loadeddata', () => {
+        console.log('✅ 비디오 데이터 로드 완료')
       })
       
       videoElement.value.addEventListener('canplay', () => {
@@ -181,27 +187,45 @@ const startCamera = async () => {
       
       videoElement.value.addEventListener('playing', () => {
         console.log('✅ 비디오 재생 중')
+        debugInfo.value = debugInfo.value + `\n- 재생 상태: ${!videoElement.value!.paused}`
       })
       
       videoElement.value.addEventListener('error', (e) => {
         console.error('❌ 비디오 에러:', e)
+        errorMessage.value = '비디오 재생 오류가 발생했습니다.'
       })
       
-      await videoElement.value.play()
-      console.log('✅ 비디오 재생 시작 명령 완료')
-      console.log('🔍 비디오 엘리먼트 상태:')
-      console.log('  - paused:', videoElement.value.paused)
-      console.log('  - readyState:', videoElement.value.readyState)
-      console.log('  - videoWidth:', videoElement.value.videoWidth)
-      console.log('  - videoHeight:', videoElement.value.videoHeight)
+      // 비디오 재생 시작
+      try {
+        await videoElement.value.play()
+        console.log('✅ 비디오 재생 시작 명령 완료')
+        console.log('🔍 비디오 엘리먼트 상태:')
+        console.log('  - paused:', videoElement.value.paused)
+        console.log('  - readyState:', videoElement.value.readyState)
+        console.log('  - videoWidth:', videoElement.value.videoWidth)
+        console.log('  - videoHeight:', videoElement.value.videoHeight)
+      } catch (playError) {
+        console.error('❌ 비디오 재생 실패:', playError)
+        errorMessage.value = '비디오 재생을 시작할 수 없습니다.'
+      }
     } else {
       console.error('❌ 비디오 엘리먼트를 찾을 수 없음')
+      console.log('🔍 현재 isCameraActive:', isCameraActive.value)
+      errorMessage.value = '비디오 엘리먼트를 찾을 수 없습니다.'
+      
+      // 다시 시도를 위해 상태 되돌리기
+      isCameraActive.value = false
+      if (stream.value) {
+        stream.value.getTracks().forEach(track => track.stop())
+        stream.value = null
+      }
     }
     
   } catch (error) {
     console.error('❌ 카메라 시작 실패:', error)
     errorMessage.value = `카메라 접근 실패: ${(error as Error).message}`
     debugInfo.value = `에러 정보: ${JSON.stringify(error, null, 2)}`
+    isCameraActive.value = false
   } finally {
     isLoading.value = false
   }

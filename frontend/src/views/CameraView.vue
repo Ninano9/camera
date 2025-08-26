@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick, toRaw } from 'vue'
 
 // MediaPipe 전역 타입 선언
 declare global {
@@ -855,26 +855,52 @@ const initializeMediaPipe = async () => {
           if (hands.value && videoElement.value) {
             try {
               // 비디오 상태 체크
-              if (videoElement.value.videoWidth === 0 || videoElement.value.videoHeight === 0) {
+              const video = videoElement.value
+              if (video.videoWidth === 0 || video.videoHeight === 0) {
                 if (frameCount % 30 === 0) {
                   console.warn('⚠️ 비디오 크기가 0입니다:', {
-                    videoWidth: videoElement.value.videoWidth,
-                    videoHeight: videoElement.value.videoHeight,
-                    readyState: videoElement.value.readyState
+                    videoWidth: video.videoWidth,
+                    videoHeight: video.videoHeight,
+                    readyState: video.readyState
                   })
                 }
                 return
               }
               
-              await hands.value.send({ image: videoElement.value })
-              
-              // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
-              if (frameCount <= 5 || frameCount % 100 === 0) {
-                console.log(`📸 MediaPipe로 프레임 전송: ${frameCount}번째`)
-                console.log(`📐 비디오 크기: ${videoElement.value.videoWidth}x${videoElement.value.videoHeight}`)
+              // 추가 안전성 체크
+              if (video.readyState < 2) { // HAVE_CURRENT_DATA
+                if (frameCount % 30 === 0) {
+                  console.warn('⚠️ 비디오가 아직 준비되지 않음:', video.readyState)
+                }
+                return
               }
+              
+              // Vue 반응형 시스템과의 충돌을 방지
+              // toRaw 사용 + 추가 안전장치
+              try {
+                const rawVideo = toRaw(video)
+                
+                // MediaPipe에 안전하게 전송
+                await hands.value.send({ image: rawVideo })
+                
+                // 프레임 전송 확인 (처음 5번, 그 후 100번마다)
+                if (frameCount <= 5 || frameCount % 100 === 0) {
+                  console.log(`📸 MediaPipe로 프레임 전송: ${frameCount}번째`)
+                  console.log(`📐 비디오 크기: ${video.videoWidth}x${video.videoHeight}`)
+                }
+              } catch (sendError) {
+                // 전송 실패 시 다른 방법 시도
+                console.warn('⚠️ toRaw 방식 실패, 직접 전송 시도:', sendError.message)
+                await hands.value.send({ image: video })
+              }
+              
             } catch (frameError) {
               console.error('⚠️ 프레임 전송 오류:', frameError)
+              
+              // 오류 발생 시 MediaPipe 재초기화 시도
+              if (frameError.message.includes('proxy') || frameError.message.includes('$$')) {
+                console.log('🔄 MediaPipe 프록시 오류 - 재초기화 필요할 수 있음')
+              }
             }
           } else {
             if (frameCount % 30 === 0) {

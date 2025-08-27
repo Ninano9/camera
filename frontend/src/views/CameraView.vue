@@ -1319,6 +1319,12 @@ const toggleGestureRecognition = async () => {
       console.log('  🖕 중지만 펼침 = 까딱으로 우클릭')
       console.log('  ✌️ 검지+중지 = 위아래로 스크롤')
       
+      console.log('🔧 환경 설정 정보:')
+      console.log(`  - API Base URL: ${import.meta.env.VITE_API_BASE_URL}`)
+      console.log(`  - WS Base URL: ${import.meta.env.VITE_WS_BASE_URL}`)
+      console.log(`  - NODE_ENV: ${import.meta.env.NODE_ENV}`)
+      console.log(`  - MODE: ${import.meta.env.MODE}`)
+      
       if (!isBackendConnected) {
         console.log('🔧 참고: 백엔드 연결 실패로 브라우저 시뮬레이션 모드로 동작합니다.')
       }

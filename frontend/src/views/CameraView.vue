@@ -416,7 +416,7 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
   let detectedGesture = ''
   
   // 1. 손가락 하나 (검지만) - 마우스 커서 이동 + 까딱으로 좌클릭
-  if (upFingerCount === 1 && fingerStates[1]) {
+  if (upFingerCount === 1 && fingerStates[1] && !fingerStates[0] && !fingerStates[2] && !fingerStates[3] && !fingerStates[4]) {
     detectedGesture = '마우스 포인터 👆'
     gestures.push(detectedGesture)
     gestures.push(`위치: (${Math.round(smoothedX)}, ${Math.round(smoothedY)})`)
@@ -453,7 +453,7 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
     
   } 
   // 2. 손가락 둘 (검지 + 중지) - 스크롤 모드
-  else if (upFingerCount === 2 && fingerStates[1] && fingerStates[2]) {
+  else if (upFingerCount === 2 && fingerStates[1] && fingerStates[2] && !fingerStates[0] && !fingerStates[3] && !fingerStates[4]) {
     detectedGesture = '스크롤 모드 ✌️'
     gestures.push(detectedGesture)
     
@@ -491,7 +491,7 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
     
   }
   // 3. 중지 하나만 - 우클릭 (추가 구현)
-  else if (upFingerCount === 1 && fingerStates[2]) {
+  else if (upFingerCount === 1 && fingerStates[2] && !fingerStates[0] && !fingerStates[1] && !fingerStates[3] && !fingerStates[4]) {
     detectedGesture = '중지 포인터 🖕'
     gestures.push(detectedGesture)
     
@@ -546,23 +546,53 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
   return gestures
 }
 
-// 더 정확한 손가락 상태 분석
+// 더 정확한 손가락 상태 분석 (엄격한 기준)
 const analyzeFingerStates = (hand: any) => {
   const fingerTips = [4, 8, 12, 16, 20] // 엄지, 검지, 중지, 약지, 소지
   const fingerPips = [3, 6, 10, 14, 18] // 각 손가락의 중간 관절
   const fingerMcps = [2, 5, 9, 13, 17] // 각 손가락의 기준점
   
-  return fingerTips.map((tipIndex, index) => {
+  const fingerStates = fingerTips.map((tipIndex, index) => {
     const tip = hand[tipIndex]
     const pip = hand[fingerPips[index]]
     const mcp = hand[fingerMcps[index]]
     
     if (tipIndex === 4) { // 엄지는 좌우 방향으로 판단
-      return tip.x > pip.x // 오른손 기준
-    } else { // 다른 손가락들은 위아래 방향으로 판단
-      return tip.y < pip.y && pip.y < mcp.y
+      const isExtended = tip.x > pip.x // 오른손 기준
+      // 엄지는 더 엄격한 기준: 중간 관절과의 거리도 확인
+      const distance = Math.abs(tip.x - pip.x)
+      return isExtended && distance > 0.05 // 더 엄격한 거리 기준
+    } else { 
+      // 다른 손가락들은 위아래 방향으로 판단 (더 엄격한 기준)
+      const tipAbovePip = tip.y < pip.y
+      const pipAboveMcp = pip.y < mcp.y
+      
+      // 추가 조건: 손가락 끝이 중간 관절보다 충분히 위에 있어야 함
+      const tipPipDistance = pip.y - tip.y
+      const pipMcpDistance = mcp.y - pip.y
+      
+      // 손가락이 확실히 펼쳐져 있는지 확인 (거리 기준 추가)
+      const isFullyExtended = tipAbovePip && pipAboveMcp && 
+                             tipPipDistance > 0.03 && // 끝마디가 충분히 올라가 있음
+                             pipMcpDistance > 0.02    // 중간마디도 충분히 올라가 있음
+      
+      return isFullyExtended
     }
   })
+  
+  // 디버깅 로그 추가 (처음 몇 번만)
+  if (gestureCount.value <= 5) {
+    console.log('🔍 손가락 상태 디버깅:', {
+      엄지: fingerStates[0] ? '펼침' : '접음',
+      검지: fingerStates[1] ? '펼침' : '접음', 
+      중지: fingerStates[2] ? '펼침' : '접음',
+      약지: fingerStates[3] ? '펼침' : '접음',
+      소지: fingerStates[4] ? '펼침' : '접음',
+      총개수: fingerStates.filter(Boolean).length
+    })
+  }
+  
+  return fingerStates
 }
 
 // 손 위치 분석

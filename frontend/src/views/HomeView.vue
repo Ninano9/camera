@@ -103,9 +103,9 @@
             <router-link to="/camera" class="btn btn-primary btn-lg">
               🎥 바로 시작하기
             </router-link>
-            <router-link to="/profiles" class="btn btn-outline btn-lg">
-              📝 프로파일 관리
-            </router-link>
+            <!-- <router-link to="/profiles" class="btn btn-outline btn-lg"> -->
+              <!-- 📝 프로파일 관리 -->
+            <!-- </router-link> -->
           </div>
         </div>
       </div>

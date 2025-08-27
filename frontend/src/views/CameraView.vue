@@ -84,38 +84,25 @@
           <div class="instruction-item">
             <span class="gesture-icon">👆</span>
             <div class="instruction-text">
-              <strong>마우스 포인터</strong>
-              <p>검지만 펼치고 손을 움직여 커서 이동</p>
+              <strong>마우스 포인터 + 좌클릭</strong>
+              <p>검지만 펼치고 손을 움직여 커서 이동<br>검지를 까딱하면 좌클릭</p>
             </div>
           </div>
           <div class="instruction-item">
-            <span class="gesture-icon">✊</span>
+            <span class="gesture-icon">🖕</span>
             <div class="instruction-text">
-              <strong>좌클릭</strong>
-              <p>주먹 쥐고 0.3초 유지</p>
+              <strong>우클릭</strong>
+              <p>중지만 펼치고 까딱하면 우클릭</p>
             </div>
           </div>
           <div class="instruction-item">
             <span class="gesture-icon">✌️</span>
             <div class="instruction-text">
-              <strong>우클릭</strong>
-              <p>브이 사인 만들고 0.3초 유지</p>
-            </div>
-          </div>
-          <div class="instruction-item">
-            <span class="gesture-icon">✋</span>
-            <div class="instruction-text">
               <strong>스크롤</strong>
-              <p>손바닥 펼치고 위/아래 위치에서 0.5초 유지</p>
+              <p>검지+중지 동시에 위/아래로 움직이면 스크롤</p>
             </div>
           </div>
-          <div class="instruction-item">
-            <span class="gesture-icon">🤟</span>
-            <div class="instruction-text">
-              <strong>ESC 키</strong>
-              <p>아이러브유 사인 0.7초 유지</p>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -161,6 +148,12 @@ const currentGesture = ref('')
 const lastGestureTime = ref(0)
 const gestureHoldTime = ref(0)
 const isPerformingAction = ref(false)
+const lastFingerMovement = ref<{
+  indexY: number
+  middleY: number
+  downMovement: boolean
+  clickExecuted: boolean
+} | null>(null)
 
 // 상태 계산
 const cameraStatus = computed(() => {
@@ -315,12 +308,13 @@ const executeKeyPress = async (key: string) => {
   }
 }
 
-// 향상된 손 제스처 분석 및 액션 실행 함수
+// 사용자 요구사항에 맞는 손 제스처 분석 및 액션 실행 함수
 const analyzeGestureAndPerformAction = (landmarks: any) => {
   const gestures: string[] = []
   
   if (!landmarks || landmarks.length === 0) {
     currentGesture.value = ''
+    lastFingerMovement.value = null
     return gestures
   }
   
@@ -330,127 +324,135 @@ const analyzeGestureAndPerformAction = (landmarks: any) => {
   const fingerStates = analyzeFingerStates(hand)
   const upFingerCount = fingerStates.filter(Boolean).length
   
-  // 손 위치 및 움직임 분석
-  const handPosition = analyzeHandPosition(hand)
-  const handMovement = analyzeHandMovement(hand)
-  
   // 화면 좌표로 변환 (부드러운 이동을 위한 보정)
   const indexTip = hand[8] // 검지 끝
+  const middleTip = hand[12] // 중지 끝
   const smoothedX = indexTip.x * window.innerWidth
   const smoothedY = indexTip.y * window.innerHeight
   
   let detectedGesture = ''
   
-  // 더 정확한 제스처 인식
+  // 1. 손가락 하나 (검지만) - 마우스 커서 이동 + 까딱으로 좌클릭
   if (upFingerCount === 1 && fingerStates[1]) {
-    // 검지만 펼침 - 마우스 포인터 모드
     detectedGesture = '마우스 포인터 👆'
     gestures.push(detectedGesture)
     gestures.push(`위치: (${Math.round(smoothedX)}, ${Math.round(smoothedY)})`)
     
-    // 실제 마우스 이동 (백엔드 API 호출)
+    // 실제 마우스 이동 (연속 호출)
     executeMouseMove(smoothedX, smoothedY)
     
-    // 손 움직임 속도 표시
-    if (handMovement.speed > 0.02) {
-      gestures.push(`빠른 이동 🚀`)
-    }
-    
-  } else if (upFingerCount === 0) {
-    // 주먹 - 좌클릭
-    detectedGesture = '좌클릭 준비 ✊'
-    gestures.push(detectedGesture)
-    
-    if (currentGesture.value === detectedGesture) {
-      gestureHoldTime.value += 1
-      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 10) * 100)}%`)
+    // 검지 까딱 감지 (검지가 갑자기 아래로 움직였다가 다시 올라오는 동작)
+    const currentIndexY = indexTip.y
+    if (lastFingerMovement.value) {
+      const yDiff = currentIndexY - lastFingerMovement.value.indexY
       
-      if (gestureHoldTime.value === 10) { // 약 0.3초 유지 시
-        detectedGesture = '좌클릭 실행! 🖱️'
-        executeClick('left')
-        gestureHoldTime.value = 0
+      // 검지가 아래로 움직였다가 다시 올라오는 까딱 동작 감지
+      if (Math.abs(yDiff) > 0.03 && !lastFingerMovement.value.clickExecuted) {
+        if (yDiff > 0.03) { // 아래로 움직임
+          lastFingerMovement.value.downMovement = true
+        } else if (yDiff < -0.03 && lastFingerMovement.value.downMovement) { // 다시 올라옴
+          detectedGesture = '검지 까딱 - 좌클릭! 👆🖱️'
+          executeClick('left')
+          lastFingerMovement.value.clickExecuted = true
+          gestures.push('좌클릭 실행!')
+          console.log('🔄 검지 까딱으로 좌클릭 실행!')
+        }
       }
-    } else {
-      gestureHoldTime.value = 0
     }
     
-  } else if (upFingerCount === 2 && fingerStates[1] && fingerStates[2]) {
-    // 브이 - 우클릭
-    detectedGesture = '우클릭 준비 ✌️'
+    // 현재 위치 저장
+    lastFingerMovement.value = {
+      indexY: currentIndexY,
+      middleY: middleTip.y,
+      downMovement: lastFingerMovement.value?.downMovement || false,
+      clickExecuted: lastFingerMovement.value?.clickExecuted || false
+    }
+    
+  } 
+  // 2. 손가락 둘 (검지 + 중지) - 스크롤 모드
+  else if (upFingerCount === 2 && fingerStates[1] && fingerStates[2]) {
+    detectedGesture = '스크롤 모드 ✌️'
     gestures.push(detectedGesture)
     
-    if (currentGesture.value === detectedGesture) {
-      gestureHoldTime.value += 1
-      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 10) * 100)}%`)
+    const currentIndexY = indexTip.y
+    const currentMiddleY = middleTip.y
+    
+    if (lastFingerMovement.value) {
+      const indexYDiff = currentIndexY - lastFingerMovement.value.indexY
+      const middleYDiff = currentMiddleY - lastFingerMovement.value.middleY
+      const avgYDiff = (indexYDiff + middleYDiff) / 2
       
-      if (gestureHoldTime.value === 10) {
-        detectedGesture = '우클릭 실행! 🖱️'
-        executeClick('right')
-        gestureHoldTime.value = 0
-      }
-    } else {
-      gestureHoldTime.value = 0
-    }
-    
-  } else if (upFingerCount === 5) {
-    // 손바닥 - 스크롤 모드
-    detectedGesture = '스크롤 모드 ✋'
-    gestures.push(detectedGesture)
-    gestures.push(`손 위치: ${handPosition.vertical}`)
-    
-    // 손의 세로 위치로 스크롤 방향 결정
-    if (handPosition.isTop) {
-      gestures.push('⬆️ 위로 스크롤 준비')
-      if (currentGesture.value === detectedGesture) {
-        gestureHoldTime.value += 1
-        if (gestureHoldTime.value === 15) { // 약 0.5초 유지 시
+      // 두 손가락이 함께 위아래로 움직이는 동작 감지
+      if (Math.abs(avgYDiff) > 0.04) {
+        if (avgYDiff < -0.04) { // 위로 움직임
+          detectedGesture = '위로 스크롤! ⬆️📜'
           executeScroll('up')
-          gestureHoldTime.value = 0
-        }
-      }
-    } else if (handPosition.isBottom) {
-      gestures.push('⬇️ 아래로 스크롤 준비')
-      if (currentGesture.value === detectedGesture) {
-        gestureHoldTime.value += 1
-        if (gestureHoldTime.value === 15) {
+          gestures.push('위로 스크롤 실행!')
+          console.log('🔄 검지+중지 위로 움직여서 위로 스크롤!')
+        } else if (avgYDiff > 0.04) { // 아래로 움직임
+          detectedGesture = '아래로 스크롤! ⬇️📜'
           executeScroll('down')
-          gestureHoldTime.value = 0
+          gestures.push('아래로 스크롤 실행!')
+          console.log('🔄 검지+중지 아래로 움직여서 아래로 스크롤!')
         }
       }
-    } else {
-      gestures.push('↕️ 스크롤 대기 (위/아래로 이동)')
     }
     
-  } else if (upFingerCount === 3 && fingerStates[0] && fingerStates[1] && fingerStates[4]) {
-    // 아이러브유 - 특수 기능 (ESC)
-    detectedGesture = 'ESC 키 준비 🤟'
+    // 현재 위치 저장
+    lastFingerMovement.value = {
+      indexY: currentIndexY,
+      middleY: currentMiddleY,
+      downMovement: false,
+      clickExecuted: false
+    }
+    
+  }
+  // 3. 중지 하나만 - 우클릭 (추가 구현)
+  else if (upFingerCount === 1 && fingerStates[2]) {
+    detectedGesture = '중지 포인터 🖕'
     gestures.push(detectedGesture)
     
-    if (currentGesture.value === detectedGesture) {
-      gestureHoldTime.value += 1
-      gestures.push(`진행도: ${Math.round((gestureHoldTime.value / 20) * 100)}%`)
+    const currentMiddleY = middleTip.y
+    if (lastFingerMovement.value) {
+      const yDiff = currentMiddleY - lastFingerMovement.value.middleY
       
-      if (gestureHoldTime.value === 20) { // 약 0.7초 유지 시
-        console.log('⌨️ ESC 키 눌림')
-        detectedGesture = 'ESC 키 실행! ⌨️'
-        executeKeyPress('ESCAPE')
-        gestureHoldTime.value = 0
+      // 중지 까딱 동작 감지
+      if (Math.abs(yDiff) > 0.03 && !lastFingerMovement.value.clickExecuted) {
+        if (yDiff > 0.03) { // 아래로 움직임
+          lastFingerMovement.value.downMovement = true
+        } else if (yDiff < -0.03 && lastFingerMovement.value.downMovement) { // 다시 올라옴
+          detectedGesture = '중지 까딱 - 우클릭! 🖕🖱️'
+          executeClick('right')
+          lastFingerMovement.value.clickExecuted = true
+          gestures.push('우클릭 실행!')
+          console.log('🔄 중지 까딱으로 우클릭 실행!')
+        }
       }
-    } else {
-      gestureHoldTime.value = 0
+    }
+    
+    // 현재 위치 저장
+    lastFingerMovement.value = {
+      indexY: indexTip.y,
+      middleY: currentMiddleY,
+      downMovement: lastFingerMovement.value?.downMovement || false,
+      clickExecuted: lastFingerMovement.value?.clickExecuted || false
     }
     
   } else {
-    // 인식되지 않은 제스처
-    detectedGesture = `알 수 없는 제스처 (${upFingerCount}개 손가락)`
+    // 다른 제스처 또는 인식되지 않은 제스처
+    detectedGesture = `다른 제스처 (${upFingerCount}개 손가락)`
     gestures.push(detectedGesture)
-    gestures.push('위 사용법을 참고하세요 📖')
+    gestures.push('👆 검지 = 마우스 이동 + 까딱으로 좌클릭')
+    gestures.push('🖕 중지 = 까딱으로 우클릭')
+    gestures.push('✌️ 검지+중지 = 위아래로 스크롤')
+    
+    // 제스처가 변경되면 이전 동작 상태 초기화
+    lastFingerMovement.value = null
   }
   
   // 제스처 변경 감지
   if (currentGesture.value !== detectedGesture) {
     currentGesture.value = detectedGesture
-    gestureHoldTime.value = 0
     
     // 중요한 제스처 실행 시에만 로그
     if (detectedGesture.includes('실행!')) {
@@ -1221,11 +1223,10 @@ const toggleGestureRecognition = async () => {
       }
       
       console.log('🎉 제스처 인식 시작 완료!')
-      console.log('📍 사용법:')
-      console.log('  👆 검지만 펼침 = 마우스 포인터')
-      console.log('  ✊ 주먹 0.3초 유지 = 좌클릭')
-      console.log('  ✌️ 브이 0.3초 유지 = 우클릭')
-      console.log('  ✋ 손바닥 위/아래 0.5초 = 스크롤')
+      console.log('📍 새로운 사용법:')
+      console.log('  👆 검지만 펼침 = 마우스 포인터 이동 + 까딱으로 좌클릭')
+      console.log('  🖕 중지만 펼침 = 까딱으로 우클릭')
+      console.log('  ✌️ 검지+중지 = 위아래로 스크롤')
       
     } catch (error) {
       console.error('❌ MediaPipe 초기화 실패:', error)

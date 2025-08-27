@@ -1,5 +1,6 @@
 package com.gesture.backend.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.awt.*;
 import java.awt.event.InputEvent;
@@ -12,6 +13,7 @@ import java.util.Map;
 public class MouseControlService {
     
     private final Robot robot;
+    private final WindowsMouseControlService windowsMouseControlService;
     private final Map<String, Long> lastActionTime = new ConcurrentHashMap<>();
     private final long ACTION_COOLDOWN = 100; // 100ms 쿨다운
     private final boolean isHeadless;
@@ -21,7 +23,9 @@ public class MouseControlService {
     private int lastY = 0;
     private final double SMOOTHING_FACTOR = 0.3;
     
-    public MouseControlService() {
+    @Autowired
+    public MouseControlService(WindowsMouseControlService windowsMouseControlService) {
+        this.windowsMouseControlService = windowsMouseControlService;
         // 헤드리스 환경 체크
         this.isHeadless = GraphicsEnvironment.isHeadless();
         
@@ -46,9 +50,26 @@ public class MouseControlService {
     }
     
     /**
-     * 마우스 위치 이동 (스무딩 적용)
+     * 마우스 위치 이동 (스무딩 적용) - Windows API 우선 사용
      */
     public void moveMouseSmooth(int x, int y) {
+        // Windows API 우선 시도
+        if (windowsMouseControlService.isWindowsApiAvailable()) {
+            // 스무딩 적용
+            int smoothedX = (int) (lastX + (x - lastX) * SMOOTHING_FACTOR);
+            int smoothedY = (int) (lastY + (y - lastY) * SMOOTHING_FACTOR);
+            
+            boolean success = windowsMouseControlService.moveMouseDirect(smoothedX, smoothedY);
+            if (success) {
+                lastX = smoothedX;
+                lastY = smoothedY;
+                return;
+            }
+            
+            System.out.println("⚠️ Windows API 실패 - Robot 클래스로 대체 시도");
+        }
+        
+        // Robot 클래스 대체 사용
         if (isHeadless || robot == null) {
             System.out.println("🖱️ 헤드리스 환경 - 마우스 이동 시뮬레이션: (" + x + ", " + y + ")");
             return;
@@ -64,7 +85,7 @@ public class MouseControlService {
             lastX = smoothedX;
             lastY = smoothedY;
             
-            System.out.println("🖱️ 마우스 이동: (" + smoothedX + ", " + smoothedY + ")");
+            System.out.println("🖱️ Robot 클래스 마우스 이동: (" + smoothedX + ", " + smoothedY + ")");
         } catch (Exception e) {
             System.err.println("❌ 마우스 이동 실패: " + e.getMessage());
         }
@@ -90,9 +111,15 @@ public class MouseControlService {
     }
     
     /**
-     * 좌클릭
+     * 좌클릭 - Windows API 우선 사용
      */
     public CompletableFuture<Void> leftClick() {
+        // Windows API 우선 시도
+        if (windowsMouseControlService.isWindowsApiAvailable()) {
+            return windowsMouseControlService.leftClickDirect();
+        }
+        
+        // Robot 클래스 대체 사용
         if (isHeadless || robot == null) {
             System.out.println("🖱️ 헤드리스 환경 - 좌클릭 시뮬레이션");
             return CompletableFuture.completedFuture(null);
@@ -102,14 +129,20 @@ public class MouseControlService {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.delay(50);
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-            System.out.println("🖱️ 좌클릭 실행");
+            System.out.println("🖱️ Robot 클래스 좌클릭 실행");
         });
     }
     
     /**
-     * 우클릭
+     * 우클릭 - Windows API 우선 사용
      */
     public CompletableFuture<Void> rightClick() {
+        // Windows API 우선 시도
+        if (windowsMouseControlService.isWindowsApiAvailable()) {
+            return windowsMouseControlService.rightClickDirect();
+        }
+        
+        // Robot 클래스 대체 사용
         if (isHeadless || robot == null) {
             System.out.println("🖱️ 헤드리스 환경 - 우클릭 시뮬레이션");
             return CompletableFuture.completedFuture(null);
@@ -119,7 +152,7 @@ public class MouseControlService {
             robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             robot.delay(50);
             robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            System.out.println("🖱️ 우클릭 실행");
+            System.out.println("🖱️ Robot 클래스 우클릭 실행");
         });
     }
     
@@ -145,9 +178,16 @@ public class MouseControlService {
     }
     
     /**
-     * 스크롤
+     * 스크롤 - Windows API 우선 사용
      */
     public void scroll(String direction, int amount) {
+        // Windows API 우선 시도
+        if (windowsMouseControlService.isWindowsApiAvailable()) {
+            windowsMouseControlService.scrollDirect(direction, amount);
+            return;
+        }
+        
+        // Robot 클래스 대체 사용
         if (isHeadless || robot == null) {
             System.out.println("📜 헤드리스 환경 - 스크롤 시뮬레이션: " + direction + " (양: " + amount + ")");
             return;
@@ -160,7 +200,7 @@ public class MouseControlService {
             robot.mouseWheel(scrollAmount);
             
             recordAction("scroll");
-            System.out.println("📜 스크롤: " + direction + " (양: " + amount + ")");
+            System.out.println("📜 Robot 클래스 스크롤: " + direction + " (양: " + amount + ")");
         } catch (Exception e) {
             System.err.println("❌ 스크롤 실패: " + e.getMessage());
         }
@@ -234,9 +274,15 @@ public class MouseControlService {
     }
     
     /**
-     * 현재 마우스 위치 가져오기
+     * 현재 마우스 위치 가져오기 - Windows API 우선 사용
      */
     public Point getCurrentMousePosition() {
+        // Windows API 우선 시도
+        if (windowsMouseControlService.isWindowsApiAvailable()) {
+            return windowsMouseControlService.getCurrentMousePosition();
+        }
+        
+        // Robot 클래스 대체 사용
         if (isHeadless) {
             System.out.println("🖱️ 헤드리스 환경 - 기본 마우스 위치 반환: (0, 0)");
             return new Point(0, 0);

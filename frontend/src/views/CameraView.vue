@@ -184,10 +184,47 @@ const gazeStatus = computed(() => {
   }
 })
 
+// 백엔드 연결 상태 확인 함수
+const checkBackendConnection = async () => {
+  try {
+    const healthUrl = `${import.meta.env.VITE_API_BASE_URL}/health`
+    console.log(`🏥 백엔드 헬스 체크: ${healthUrl}`)
+    
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    console.log(`📡 헬스 체크 응답: ${response.status} ${response.statusText}`)
+    
+    if (response.ok) {
+      const result = await response.json()
+      console.log(`✅ 백엔드 서버 정상 연결됨:`, result)
+      return true
+    } else {
+      console.error(`❌ 백엔드 서버 응답 오류: ${response.status}`)
+      return false
+    }
+  } catch (error) {
+    console.error('❌ 백엔드 서버 연결 실패:', error)
+    console.error('🔍 연결 오류 상세:', {
+      message: error.message,
+      healthUrl: `${import.meta.env.VITE_API_BASE_URL}/health`
+    })
+    return false
+  }
+}
+
 // 백엔드 API를 통한 실제 마우스 제어 함수들
 const executeMouseMove = async (x: number, y: number) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/move`, {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/move`
+    console.log(`🔗 마우스 이동 API 호출: ${apiUrl}`)
+    console.log(`📍 요청 좌표: (${Math.round(x)}, ${Math.round(y)})`)
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -199,14 +236,27 @@ const executeMouseMove = async (x: number, y: number) => {
       })
     })
     
+    console.log(`📡 응답 상태: ${response.status} ${response.statusText}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
     const result = await response.json()
+    console.log(`📋 응답 결과:`, result)
+    
     if (result.success) {
-      console.log(`🖱️ 실제 마우스 이동: (${Math.round(x)}, ${Math.round(y)})`)
+      console.log(`✅ 실제 마우스 이동 성공: (${Math.round(x)}, ${Math.round(y)})`)
     } else {
       console.error('❌ 마우스 이동 실패:', result.message)
     }
   } catch (error) {
     console.error('❌ 마우스 이동 API 호출 실패:', error)
+    console.error('🔍 상세 오류:', {
+      message: error.message,
+      stack: error.stack,
+      apiUrl: `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/move`
+    })
     // 백엔드가 연결되지 않은 경우 시뮬레이션으로 대체
     console.log(`🖱️ 마우스 이동 시뮬레이션: (${Math.round(x)}, ${Math.round(y)})`)
   }
@@ -217,16 +267,27 @@ const executeClick = async (button: 'left' | 'right' = 'left') => {
     isPerformingAction.value = true
     
     const endpoint = button === 'left' ? 'left-click' : 'right-click'
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/${endpoint}`, {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/${endpoint}`
+    console.log(`🔗 ${button} 클릭 API 호출: ${apiUrl}`)
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       }
     })
     
+    console.log(`📡 ${button} 클릭 응답 상태: ${response.status} ${response.statusText}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
     const result = await response.json()
+    console.log(`📋 ${button} 클릭 응답 결과:`, result)
+    
     if (result.success) {
-      console.log(`🖱️ 실제 ${button} 클릭 실행 완료`)
+      console.log(`✅ 실제 ${button} 클릭 실행 완료`)
     } else {
       console.error(`❌ ${button} 클릭 실패:`, result.message)
     }
@@ -237,9 +298,14 @@ const executeClick = async (button: 'left' | 'right' = 'left') => {
     
   } catch (error) {
     console.error(`❌ ${button} 클릭 API 호출 실패:`, error)
+    console.error('🔍 클릭 상세 오류:', {
+      message: error.message,
+      apiUrl: `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/${button === 'left' ? 'left-click' : 'right-click'}`
+    })
     // 백엔드가 연결되지 않은 경우 페이지 스크롤로 대체
     if (button === 'left') {
       window.scrollBy(0, -50) // 위로 스크롤
+      console.log('🔄 대체 동작: 페이지 위로 스크롤')
     }
     
     setTimeout(() => {
@@ -252,7 +318,11 @@ const executeScroll = async (direction: 'up' | 'down') => {
   try {
     isPerformingAction.value = true
     
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/scroll`, {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/scroll`
+    console.log(`🔗 스크롤 API 호출: ${apiUrl}`)
+    console.log(`📜 스크롤 방향: ${direction}`)
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -264,9 +334,17 @@ const executeScroll = async (direction: 'up' | 'down') => {
       })
     })
     
+    console.log(`📡 스크롤 응답 상태: ${response.status} ${response.statusText}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
     const result = await response.json()
+    console.log(`📋 스크롤 응답 결과:`, result)
+    
     if (result.success) {
-      console.log(`📜 실제 스크롤 ${direction === 'up' ? '위로' : '아래로'} 실행 완료`)
+      console.log(`✅ 실제 스크롤 ${direction === 'up' ? '위로' : '아래로'} 실행 완료`)
     } else {
       console.error(`❌ 스크롤 ${direction} 실패:`, result.message)
     }
@@ -277,8 +355,13 @@ const executeScroll = async (direction: 'up' | 'down') => {
     
   } catch (error) {
     console.error(`❌ 스크롤 ${direction} API 호출 실패:`, error)
+    console.error('🔍 스크롤 상세 오류:', {
+      message: error.message,
+      apiUrl: `${import.meta.env.VITE_API_BASE_URL}/api/gesture/mouse/scroll`
+    })
     // 백엔드가 연결되지 않은 경우 페이지 스크롤로 대체
     window.scrollBy(0, direction === 'up' ? -100 : 100)
+    console.log(`🔄 대체 동작: 페이지 ${direction === 'up' ? '위로' : '아래로'} 스크롤`)
     
     setTimeout(() => {
       isPerformingAction.value = false
@@ -1212,6 +1295,14 @@ const toggleGestureRecognition = async () => {
     console.log('🖐️ 손 제스처 인식 활성화')
     
     try {
+      // 백엔드 연결 상태 먼저 확인
+      console.log('🔍 백엔드 서버 연결 상태 확인 중...')
+      const isBackendConnected = await checkBackendConnection()
+      
+      if (!isBackendConnected) {
+        console.warn('⚠️ 백엔드 서버에 연결할 수 없습니다. 시뮬레이션 모드로 동작합니다.')
+      }
+      
       // MediaPipe 초기화
       if (!nativeHands) {
         console.log('🤖 네이티브 MediaPipe 첫 초기화 시작...')
@@ -1227,6 +1318,10 @@ const toggleGestureRecognition = async () => {
       console.log('  👆 검지만 펼침 = 마우스 포인터 이동 + 까딱으로 좌클릭')
       console.log('  🖕 중지만 펼침 = 까딱으로 우클릭')
       console.log('  ✌️ 검지+중지 = 위아래로 스크롤')
+      
+      if (!isBackendConnected) {
+        console.log('🔧 참고: 백엔드 연결 실패로 브라우저 시뮬레이션 모드로 동작합니다.')
+      }
       
     } catch (error) {
       console.error('❌ MediaPipe 초기화 실패:', error)

@@ -48,6 +48,15 @@ public class WindowsMouseControlService {
         int MOUSEEVENTF_RIGHTDOWN = 0x0008;
         int MOUSEEVENTF_RIGHTUP = 0x0010;
         int MOUSEEVENTF_WHEEL = 0x0800;
+        int MOUSEEVENTF_MOVE = 0x0001;
+        int MOUSEEVENTF_ABSOLUTE = 0x8000;
+        
+        // wParam 마우스 버튼 상태 상수
+        int MK_CONTROL = 0x0008;
+        int MK_LBUTTON = 0x0001;
+        int MK_RBUTTON = 0x0002;
+        int MK_MBUTTON = 0x0010;
+        int MK_SHIFT = 0x0004;
         
         // 시스템 메트릭스 상수
         int SM_CXSCREEN = 0;
@@ -116,21 +125,50 @@ public class WindowsMouseControlService {
      * SetCursorPos를 사용한 직접적인 마우스 이동
      */
     public boolean moveMouseDirect(int x, int y) {
+        System.out.println("🔄 마우스 이동 요청: (" + x + ", " + y + ")");
+        System.out.println("🔍 Windows API 상태: " + isWindowsApiAvailable);
+        System.out.println("🔍 User32 인스턴스: " + (user32 != null));
+        
         if (!isWindowsApiAvailable || user32 == null) {
             System.out.println("🖱️ Windows API 비활성화 - 마우스 이동 시뮬레이션: (" + x + ", " + y + ")");
             return false;
         }
         
         try {
+            // 이동 전 현재 위치 확인
+            POINT beforePoint = new POINT();
+            boolean beforeSuccess = user32.GetCursorPos(beforePoint);
+            if (beforeSuccess) {
+                System.out.println("📍 이동 전 마우스 위치: (" + beforePoint.x + ", " + beforePoint.y + ")");
+            }
+            
+            // SetCursorPos 호출
+            System.out.println("🚀 SetCursorPos 호출 중...");
             boolean success = user32.SetCursorPos(x, y);
+            System.out.println("📊 SetCursorPos 결과: " + success);
+            
             if (success) {
-                System.out.println("✅ Windows API 마우스 이동 성공: (" + x + ", " + y + ")");
+                // 이동 후 실제 위치 확인
+                Thread.sleep(10); // 잠시 대기
+                POINT afterPoint = new POINT();
+                boolean afterSuccess = user32.GetCursorPos(afterPoint);
+                if (afterSuccess) {
+                    System.out.println("📍 이동 후 마우스 위치: (" + afterPoint.x + ", " + afterPoint.y + ")");
+                    if (afterPoint.x == x && afterPoint.y == y) {
+                        System.out.println("✅ Windows API 마우스 이동 성공: (" + x + ", " + y + ")");
+                    } else {
+                        System.out.println("⚠️ 이동 요청과 실제 위치 불일치");
+                    }
+                } else {
+                    System.out.println("✅ SetCursorPos 성공 (위치 확인 실패)");
+                }
             } else {
                 System.err.println("❌ Windows API 마우스 이동 실패: (" + x + ", " + y + ")");
             }
             return success;
         } catch (Exception e) {
             System.err.println("❌ SetCursorPos 호출 실패: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }

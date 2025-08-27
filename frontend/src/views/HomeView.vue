@@ -50,9 +50,9 @@
             <p>제스처와 시선을 다양한 액션으로 자유롭게 바인딩</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">📱</div>
-            <h3>프로파일 기반 제어</h3>
-            <p>코딩, 프레젠테이션, 미디어 등 상황별 맞춤 프리셋</p>
+            <div class="feature-icon">⚡</div>
+            <h3>실시간 손가락 제어</h3>
+            <p>검지로 마우스 이동, 까딱으로 클릭, 두 손가락으로 스크롤</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">🔒</div>

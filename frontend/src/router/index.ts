@@ -13,16 +13,7 @@ const router = createRouter({
       name: 'Camera',
       component: () => import('../views/CameraView.vue')
     },
-    {
-      path: '/profiles',
-      name: 'Profiles',
-      component: () => import('../views/ProfilesView.vue')
-    },
-    {
-      path: '/profiles/:id',
-      name: 'ProfileDetail',
-      component: () => import('../views/ProfileDetailView.vue')
-    },
+
     {
       path: '/settings',
       name: 'Settings',

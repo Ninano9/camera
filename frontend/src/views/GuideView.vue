@@ -23,101 +23,51 @@
           </div>
           <div class="step">
             <div class="step-number">3</div>
-            <h3>프로파일 설정</h3>
-            <p>용도에 맞는 제스처 매핑을 선택하거나 커스터마이징하세요</p>
+            <h3>손가락 제스처 시작</h3>
+            <p>손가락 움직임으로 마우스를 제어해보세요</p>
           </div>
         </div>
       </section>
 
       <!-- 기본 제스처 -->
       <section class="guide-section">
-        <h2>✋ 기본 제스처</h2>
+        <h2>✋ 손가락 제스처</h2>
         <div class="gestures-grid">
           <div class="gesture-card">
             <div class="gesture-icon">👆</div>
-            <h3>검지 포인팅</h3>
-            <p>클릭 동작</p>
+            <h3>검지 하나</h3>
+            <p>마우스 포인터 이동 + 까딱으로 좌클릭</p>
           </div>
           <div class="gesture-card">
-            <div class="gesture-icon">🤏</div>
-            <h3>핀치</h3>
-            <p>선택/드래그</p>
+            <div class="gesture-icon">🖕</div>
+            <h3>중지 하나</h3>
+            <p>까딱으로 우클릭</p>
           </div>
           <div class="gesture-card">
             <div class="gesture-icon">✌️</div>
-            <h3>V 제스처</h3>
-            <p>재생/일시정지</p>
-          </div>
-          <div class="gesture-card">
-            <div class="gesture-icon">✋</div>
-            <h3>손바닥 펼치기</h3>
-            <p>정지/취소</p>
-          </div>
-          <div class="gesture-card">
-            <div class="gesture-icon">👊</div>
-            <h3>주먹 쥐기</h3>
-            <p>저장 (Ctrl+S)</p>
-          </div>
-          <div class="gesture-card">
-            <div class="gesture-icon">👍</div>
-            <h3>엄지 업</h3>
-            <p>확인/승인</p>
+            <h3>검지 + 중지</h3>
+            <p>위아래로 움직여 스크롤</p>
           </div>
         </div>
       </section>
 
-      <!-- 시선 제어 -->
+      <!-- 상세 사용법 -->
       <section class="guide-section">
-        <h2>👁️ 시선 제어</h2>
-        <div class="eye-control-grid">
-          <div class="control-card">
-            <h3>시선 커서</h3>
-            <p>눈동자 움직임으로 마우스 커서를 조작할 수 있습니다</p>
+        <h2>📖 상세 사용법</h2>
+        <div class="usage-grid">
+          <div class="usage-card">
+            <h3>👆 마우스 포인터 + 좌클릭</h3>
+            <p><strong>검지만 펼치기:</strong> 손을 움직이면 마우스 커서가 따라 움직입니다</p>
+            <p><strong>검지 까딱:</strong> 검지를 아래로 살짝 움직였다가 다시 올리면 좌클릭됩니다</p>
           </div>
-          <div class="control-card">
-            <h3>짧은 깜빡임</h3>
-            <p>클릭 동작을 수행합니다</p>
+          <div class="usage-card">
+            <h3>🖕 우클릭</h3>
+            <p><strong>중지만 펼치기:</strong> 중지 하나만 세우고 까딱하면 우클릭됩니다</p>
           </div>
-          <div class="control-card">
-            <h3>긴 깜빡임</h3>
-            <p>우클릭 또는 컨텍스트 메뉴를 실행합니다</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- 프로파일 소개 -->
-      <section class="guide-section">
-        <h2>📝 프로파일 종류</h2>
-        <div class="profiles-grid">
-          <div class="profile-card">
-            <div class="profile-icon">💻</div>
-            <h3>코딩 프로파일</h3>
-            <p>IDE와 개발 도구에 최적화된 제스처 설정</p>
-            <ul>
-              <li>주먹 쥐기: Ctrl+S (저장)</li>
-              <li>V 제스처: Ctrl+P (명령 팔레트)</li>
-              <li>시선 좌/우: 탭 전환</li>
-            </ul>
-          </div>
-          <div class="profile-card">
-            <div class="profile-icon">📊</div>
-            <h3>프레젠테이션 프로파일</h3>
-            <p>발표와 슬라이드 제어에 특화된 설정</p>
-            <ul>
-              <li>좌/우 스와이프: 슬라이드 이동</li>
-              <li>핀치 홀드: 레이저 포인터</li>
-              <li>엄지 업: 포인터 토글</li>
-            </ul>
-          </div>
-          <div class="profile-card">
-            <div class="profile-icon">🎵</div>
-            <h3>미디어 프로파일</h3>
-            <p>음악과 동영상 재생 제어</p>
-            <ul>
-              <li>V 제스처: 재생/일시정지</li>
-              <li>엄지 좌/우: 볼륨 조절</li>
-              <li>손바닥: 정지</li>
-            </ul>
+          <div class="usage-card">
+            <h3>✌️ 스크롤</h3>
+            <p><strong>검지+중지 펼치기:</strong> 두 손가락을 동시에 위아래로 움직이면 스크롤됩니다</p>
+            <p>위로 올리면 위로 스크롤, 아래로 내리면 아래로 스크롤</p>
           </div>
         </div>
       </section>
@@ -152,9 +102,6 @@
           <div class="cta-buttons">
             <router-link to="/camera" class="btn btn-primary btn-lg">
               🎥 제스처 인식 시작
-            </router-link>
-            <router-link to="/profiles" class="btn btn-outline btn-lg">
-              📝 프로파일 설정
             </router-link>
           </div>
         </div>
@@ -310,52 +257,34 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.profiles-grid {
+.usage-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
 }
 
-.profile-card {
+.usage-card {
   background: var(--bg-color);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: var(--shadow);
 }
 
-.profile-icon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.profile-card h3 {
+.usage-card h3 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
   color: var(--text-color);
 }
 
-.profile-card p {
+.usage-card p {
   color: var(--text-secondary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
 }
 
-.profile-card ul {
-  list-style: none;
-  padding: 0;
-}
-
-.profile-card li {
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-  padding-left: 1rem;
-  position: relative;
-}
-
-.profile-card li::before {
-  content: "•";
+.usage-card strong {
   color: var(--primary-color);
-  position: absolute;
-  left: 0;
+  font-weight: 600;
 }
 
 .guide-cta {

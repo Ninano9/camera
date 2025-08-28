@@ -86,25 +86,23 @@ public class MouseControlService {
             System.out.println("⚠️ Windows API 실패 - Robot 클래스로 대체");
         }
         
-        // Robot 클래스 대체 사용
+        // Linux/macOS 또는 Windows API 실패: Robot 클래스 사용
         if (isHeadless || robot == null) {
-            System.out.println("🖱️ 헤드리스 환경 - 마우스 이동 시뮬레이션: (" + x + ", " + y + ")");
+            System.out.println("🖱️ 헤드리스 환경 - 마우스 이동 시뮬레이션: (" + smoothedX + ", " + smoothedY + ")");
+            lastX = smoothedX;
+            lastY = smoothedY;
             return;
         }
         
         try {
-            // 스무딩 적용
-            int smoothedX = (int) (lastX + (x - lastX) * SMOOTHING_FACTOR);
-            int smoothedY = (int) (lastY + (y - lastY) * SMOOTHING_FACTOR);
-            
             robot.mouseMove(smoothedX, smoothedY);
-            
             lastX = smoothedX;
             lastY = smoothedY;
             
-            System.out.println("🖱️ Robot 클래스 마우스 이동: (" + smoothedX + ", " + smoothedY + ")");
+            String osInfo = isLinux ? "Linux" : isMacOS ? "macOS" : "Robot";
+            System.out.println("🖱️ " + osInfo + " 마우스 이동: (" + smoothedX + ", " + smoothedY + ")");
         } catch (Exception e) {
-            System.err.println("❌ 마우스 이동 실패: " + e.getMessage());
+            System.err.println("❌ 마우스 이동 실패 (" + osName + "): " + e.getMessage());
         }
     }
     

@@ -2,15 +2,20 @@ package com.gesture.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 
 @SpringBootApplication
+@ComponentScan(basePackages = "com.gesture.backend")
 public class GestureBackendApplication {
 
     public static void main(String[] args) {
+        System.out.println("🚀 Gesture Backend 시작 중...");
+        System.out.println("📦 ComponentScan 패키지: com.gesture.backend");
         SpringApplication.run(GestureBackendApplication.class, args);
+        System.out.println("✅ Gesture Backend 시작 완료!");
     }
 
     @RestController

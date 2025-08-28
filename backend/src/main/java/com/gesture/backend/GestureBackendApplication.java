@@ -4,8 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.gesture.backend.service.MouseControlService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -27,9 +25,6 @@ public class GestureBackendApplication {
     @RestController
     @CrossOrigin(origins = "*")
     public static class RootController {
-        
-        @Autowired
-        private MouseControlService mouseControlService;
         
         private final ObjectMapper objectMapper = new ObjectMapper();
         
@@ -62,7 +57,7 @@ public class GestureBackendApplication {
                 int x = json.get("x").asInt();
                 int y = json.get("y").asInt();
                 
-                mouseControlService.moveMouseSmooth(x, y);
+                // mouseControlService.moveMouseSmooth(x, y); // 임시로 비활성화
                 System.out.println("✅ 마우스 이동 완료: (" + x + ", " + y + ")");
                 return ResponseEntity.ok("{\"success\": true, \"message\": \"마우스 이동 완료\"}");
             } catch (Exception e) {
@@ -75,7 +70,7 @@ public class GestureBackendApplication {
         public ResponseEntity<String> leftClick() {
             try {
                 System.out.println("🖱️ 좌클릭 요청 받음");
-                mouseControlService.leftClick();
+                // mouseControlService.leftClick(); // 임시로 비활성화
                 System.out.println("✅ 좌클릭 완료");
                 return ResponseEntity.ok("{\"success\": true, \"message\": \"좌클릭 완료\"}");
             } catch (Exception e) {
@@ -88,7 +83,7 @@ public class GestureBackendApplication {
         public ResponseEntity<String> rightClick() {
             try {
                 System.out.println("🖱️ 우클릭 요청 받음");
-                mouseControlService.rightClick();
+                // mouseControlService.rightClick(); // 임시로 비활성화
                 System.out.println("✅ 우클릭 완료");
                 return ResponseEntity.ok("{\"success\": true, \"message\": \"우클릭 완료\"}");
             } catch (Exception e) {
@@ -105,7 +100,7 @@ public class GestureBackendApplication {
                 String direction = json.get("direction").asText();
                 int amount = json.has("amount") ? json.get("amount").asInt() : 3;
                 
-                mouseControlService.scroll(direction, amount);
+                // mouseControlService.scroll(direction, amount); // 임시로 비활성화
                 System.out.println("✅ 스크롤 완료: " + direction + " (양: " + amount + ")");
                 return ResponseEntity.ok("{\"success\": true, \"message\": \"스크롤 완료\"}");
             } catch (Exception e) {

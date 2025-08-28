@@ -4,16 +4,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.context.annotation.Import;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import com.gesture.backend.controller.GestureController;
+import com.gesture.backend.controller.HealthController;
 
-@SpringBootApplication
-@ComponentScan(basePackages = {
-    "com.gesture.backend.controller",
-    "com.gesture.backend.service", 
-    "com.gesture.backend.config"
-})
+@SpringBootApplication(scanBasePackages = "com.gesture.backend")
+@Import({GestureController.class, HealthController.class})
 public class GestureBackendApplication {
 
     public static void main(String[] args) {
@@ -39,6 +37,29 @@ public class GestureBackendApplication {
         @GetMapping("/api")
         public ResponseEntity<String> apiRoot() {
             return ResponseEntity.ok("API is available!");
+        }
+        
+        @GetMapping("/api/gesture/test")
+        public ResponseEntity<String> gestureTest() {
+            return ResponseEntity.ok("🎯 Gesture Controller is working!");
+        }
+        
+        @PostMapping("/api/gesture/mouse/move")
+        public ResponseEntity<String> mouseMove(@RequestBody String body) {
+            System.out.println("🖱️ 마우스 이동 요청 받음: " + body);
+            return ResponseEntity.ok("마우스 이동 완료");
+        }
+        
+        @PostMapping("/api/gesture/mouse/left-click")
+        public ResponseEntity<String> leftClick() {
+            System.out.println("🖱️ 좌클릭 요청 받음");
+            return ResponseEntity.ok("좌클릭 완료");
+        }
+        
+        @PostMapping("/api/gesture/mouse/scroll")
+        public ResponseEntity<String> scroll(@RequestBody String body) {
+            System.out.println("📜 스크롤 요청 받음: " + body);
+            return ResponseEntity.ok("스크롤 완료");
         }
     }
 }

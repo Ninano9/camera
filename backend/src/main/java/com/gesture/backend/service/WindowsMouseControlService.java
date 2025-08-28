@@ -89,7 +89,9 @@ public class WindowsMouseControlService {
         User32 tempUser32 = null;
         
         try {
-            if (Platform.isWindows()) {
+            // 안전한 플랫폼 확인
+            String osName = System.getProperty("os.name", "").toLowerCase();
+            if (osName.contains("windows")) {
                 tempUser32 = User32.INSTANCE;
                 if (tempUser32 != null) {
                     apiAvailable = true;
@@ -107,10 +109,12 @@ public class WindowsMouseControlService {
                     System.out.println("⚠️ User32 인스턴스 생성 실패");
                 }
             } else {
-                System.out.println("⚠️ Windows가 아닌 환경 - Windows API 비활성화");
+                System.out.println("⚠️ Windows가 아닌 환경 - Windows API 비활성화 (OS: " + osName + ")");
             }
         } catch (Exception e) {
             System.err.println("❌ Windows API 초기화 실패: " + e.getMessage());
+        } catch (Throwable t) {
+            System.err.println("❌ Windows API 치명적 오류 (무시됨): " + t.getMessage());
         }
         
         this.user32 = tempUser32;

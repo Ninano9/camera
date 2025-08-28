@@ -14,7 +14,16 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/gesture")
-@CrossOrigin(origins = "*")
+@CrossOrigin(
+    origins = {
+        "https://camera-frontend-0gzf.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    },
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+    allowedHeaders = "*",
+    allowCredentials = true
+)
 @Validated
 public class GestureController {
     

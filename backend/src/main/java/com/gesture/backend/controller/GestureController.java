@@ -22,6 +22,14 @@ public class GestureController {
     private MouseControlService mouseControlService;
     
     /**
+     * 테스트 엔드포인트
+     */
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("Gesture Controller is working!");
+    }
+    
+    /**
      * 마우스 이동
      */
     @PostMapping("/mouse/move")

@@ -19,7 +19,7 @@ public class HealthController {
         health.put("status", "UP");
         health.put("timestamp", LocalDateTime.now());
         health.put("service", "gesture-backend");
-        health.put("version", "0.1.0");
+        health.put("version", "0.1.0-fixed-2025-08-28");
         return ResponseEntity.ok(health);
     }
 

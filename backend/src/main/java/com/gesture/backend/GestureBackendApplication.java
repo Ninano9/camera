@@ -18,7 +18,7 @@ public class GestureBackendApplication {
         
         @GetMapping("/")
         public ResponseEntity<String> root() {
-            return ResponseEntity.ok("Gesture Backend is running!");
+            return ResponseEntity.ok("Gesture Backend is running! Version: 2025-08-28-v2");
         }
         
         @GetMapping("/api")

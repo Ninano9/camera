@@ -24,23 +24,26 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Security와 OAuth2는 현재 사용하지 않으므로 비활성화
+    // implementation 'org.springframework.boot:spring-boot-starter-security'
+    // JPA 완전 제거 - 제스처 기능만 사용
+    // implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    // Redis도 현재 사용하지 않으므로 비활성화
+    // implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     
-    // Database
-    runtimeOnly 'org.postgresql:postgresql'
+    // Database - PostgreSQL 제거 (현재 사용하지 않음)
+    // runtimeOnly 'org.postgresql:postgresql'
     
     	// JNA for Windows API access (optional for cross-platform compatibility)
 	implementation 'net.java.dev.jna:jna:5.13.0'
 	implementation 'net.java.dev.jna:jna-platform:5.13.0'
     
-    // JWT
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+    // JWT - 현재 사용하지 않으므로 비활성화
+    // implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    // runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    // runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
     
     // Utilities
     compileOnly 'org.projectlombok:lombok'

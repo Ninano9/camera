@@ -2,28 +2,20 @@ package com.gesture.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
+// JPA 관련 import 제거 - 더이상 필요없음
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 
-@SpringBootApplication(exclude = {
-    DataSourceAutoConfiguration.class, 
-    HibernateJpaAutoConfiguration.class,
-    JpaRepositoriesAutoConfiguration.class
-})
+@SpringBootApplication
 @ComponentScan(basePackages = "com.gesture.backend")
-@EntityScan(basePackages = "com.gesture.backend.nonexistent")
 public class GestureBackendApplication {
 
     public static void main(String[] args) {
         System.out.println("🚀 Gesture Backend 시작 중...");
         System.out.println("📦 ComponentScan 패키지: com.gesture.backend");
-        System.out.println("🚫 JPA/DataSource 비활성화 - 제스처 기능만 활성화");
+        System.out.println("⚡ 경량화된 제스처 전용 백엔드 - JPA/DB 의존성 완전 제거");
         SpringApplication.run(GestureBackendApplication.class, args);
         System.out.println("✅ Gesture Backend 시작 완료!");
     }

@@ -17,6 +17,10 @@ public class MouseControlService {
     private final Map<String, Long> lastActionTime = new ConcurrentHashMap<>();
     private final long ACTION_COOLDOWN = 100; // 100ms 쿨다운
     private final boolean isHeadless;
+    private final String osName;
+    private final boolean isWindows;
+    private final boolean isLinux;
+    private final boolean isMacOS;
     
     // 마우스 위치 스무딩을 위한 변수들
     private int lastX = 0;
@@ -26,8 +30,22 @@ public class MouseControlService {
     @Autowired
     public MouseControlService(WindowsMouseControlService windowsMouseControlService) {
         this.windowsMouseControlService = windowsMouseControlService;
+        
+        // 운영체제 정보 초기화
+        this.osName = System.getProperty("os.name").toLowerCase();
+        this.isWindows = osName.contains("windows");
+        this.isLinux = osName.contains("linux");
+        this.isMacOS = osName.contains("mac");
+        
         // 헤드리스 환경 체크
         this.isHeadless = GraphicsEnvironment.isHeadless();
+        
+        System.out.println("🖥️ 시스템 정보:");
+        System.out.println("  - OS: " + osName);
+        System.out.println("  - Windows: " + isWindows);
+        System.out.println("  - Linux: " + isLinux);
+        System.out.println("  - macOS: " + isMacOS);
+        System.out.println("  - 헤드리스: " + isHeadless);
         
         if (isHeadless) {
             System.out.println("⚠️ 헤드리스 환경 감지 - GUI 기능 비활성화");
@@ -41,7 +59,7 @@ public class MouseControlService {
                 // 화면 크기 가져오기
                 Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
                 System.out.println("🖥️ 화면 크기: " + screenSize.width + "x" + screenSize.height);
-                System.out.println("✅ MouseControlService 초기화 완료");
+                System.out.println("✅ MouseControlService 초기화 완료 (" + osName + ")");
             } catch (AWTException e) {
                 System.err.println("❌ Robot 클래스 초기화 실패: " + e.getMessage());
                 throw new RuntimeException("❌ Robot 클래스 초기화 실패: " + e.getMessage(), e);
@@ -53,20 +71,19 @@ public class MouseControlService {
      * 마우스 위치 이동 (스무딩 적용) - Windows API 우선 사용
      */
     public void moveMouseSmooth(int x, int y) {
-        // Windows API 우선 시도
-        if (windowsMouseControlService.isWindowsApiAvailable()) {
-            // 스무딩 적용
-            int smoothedX = (int) (lastX + (x - lastX) * SMOOTHING_FACTOR);
-            int smoothedY = (int) (lastY + (y - lastY) * SMOOTHING_FACTOR);
-            
+        // 스무딩 적용
+        int smoothedX = (int) (lastX + (x - lastX) * SMOOTHING_FACTOR);
+        int smoothedY = (int) (lastY + (y - lastY) * SMOOTHING_FACTOR);
+        
+        // Windows: Windows API 우선 시도
+        if (isWindows && windowsMouseControlService.isWindowsApiAvailable()) {
             boolean success = windowsMouseControlService.moveMouseDirect(smoothedX, smoothedY);
             if (success) {
                 lastX = smoothedX;
                 lastY = smoothedY;
                 return;
             }
-            
-            System.out.println("⚠️ Windows API 실패 - Robot 클래스로 대체 시도");
+            System.out.println("⚠️ Windows API 실패 - Robot 클래스로 대체");
         }
         
         // Robot 클래스 대체 사용
@@ -111,15 +128,15 @@ public class MouseControlService {
     }
     
     /**
-     * 좌클릭 - Windows API 우선 사용
+     * 좌클릭 - 크로스 플랫폼 지원
      */
     public CompletableFuture<Void> leftClick() {
-        // Windows API 우선 시도
-        if (windowsMouseControlService.isWindowsApiAvailable()) {
+        // Windows: Windows API 우선 시도
+        if (isWindows && windowsMouseControlService.isWindowsApiAvailable()) {
             return windowsMouseControlService.leftClickDirect();
         }
         
-        // Robot 클래스 대체 사용
+        // Linux/macOS 또는 Windows API 실패: Robot 클래스 사용
         if (isHeadless || robot == null) {
             System.out.println("🖱️ 헤드리스 환경 - 좌클릭 시뮬레이션");
             return CompletableFuture.completedFuture(null);
@@ -129,20 +146,22 @@ public class MouseControlService {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.delay(50);
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-            System.out.println("🖱️ Robot 클래스 좌클릭 실행");
+            
+            String osInfo = isLinux ? "Linux" : isMacOS ? "macOS" : "Robot";
+            System.out.println("🖱️ " + osInfo + " 좌클릭 실행");
         });
     }
     
     /**
-     * 우클릭 - Windows API 우선 사용
+     * 우클릭 - 크로스 플랫폼 지원
      */
     public CompletableFuture<Void> rightClick() {
-        // Windows API 우선 시도
-        if (windowsMouseControlService.isWindowsApiAvailable()) {
+        // Windows: Windows API 우선 시도
+        if (isWindows && windowsMouseControlService.isWindowsApiAvailable()) {
             return windowsMouseControlService.rightClickDirect();
         }
         
-        // Robot 클래스 대체 사용
+        // Linux/macOS 또는 Windows API 실패: Robot 클래스 사용
         if (isHeadless || robot == null) {
             System.out.println("🖱️ 헤드리스 환경 - 우클릭 시뮬레이션");
             return CompletableFuture.completedFuture(null);
@@ -152,7 +171,9 @@ public class MouseControlService {
             robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             robot.delay(50);
             robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            System.out.println("🖱️ Robot 클래스 우클릭 실행");
+            
+            String osInfo = isLinux ? "Linux" : isMacOS ? "macOS" : "Robot";
+            System.out.println("🖱️ " + osInfo + " 우클릭 실행");
         });
     }
     
@@ -181,13 +202,13 @@ public class MouseControlService {
      * 스크롤 - Windows API 우선 사용
      */
     public void scroll(String direction, int amount) {
-        // Windows API 우선 시도
-        if (windowsMouseControlService.isWindowsApiAvailable()) {
+        // Windows: Windows API 우선 시도
+        if (isWindows && windowsMouseControlService.isWindowsApiAvailable()) {
             windowsMouseControlService.scrollDirect(direction, amount);
             return;
         }
         
-        // Robot 클래스 대체 사용
+        // Linux/macOS 또는 Windows API 실패: Robot 클래스 사용
         if (isHeadless || robot == null) {
             System.out.println("📜 헤드리스 환경 - 스크롤 시뮬레이션: " + direction + " (양: " + amount + ")");
             return;
@@ -200,9 +221,11 @@ public class MouseControlService {
             robot.mouseWheel(scrollAmount);
             
             recordAction("scroll");
-            System.out.println("📜 Robot 클래스 스크롤: " + direction + " (양: " + amount + ")");
+            
+            String osInfo = isLinux ? "Linux" : isMacOS ? "macOS" : "Robot";
+            System.out.println("📜 " + osInfo + " 스크롤: " + direction + " (양: " + amount + ")");
         } catch (Exception e) {
-            System.err.println("❌ 스크롤 실패: " + e.getMessage());
+            System.err.println("❌ 스크롤 실패 (" + osName + "): " + e.getMessage());
         }
     }
     

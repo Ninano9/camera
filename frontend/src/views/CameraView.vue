@@ -187,8 +187,7 @@ const gazeStatus = computed(() => {
 // 백엔드 연결 상태 확인 함수
 const checkBackendConnection = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const healthUrl = `${baseUrl}/health`
+    const healthUrl = `${import.meta.env.VITE_API_BASE_URL}/health`
     console.log(`🏥 백엔드 헬스 체크: ${healthUrl}`)
     
     const response = await fetch(healthUrl, {
@@ -212,7 +211,7 @@ const checkBackendConnection = async () => {
     console.error('❌ 백엔드 서버 연결 실패:', error)
             console.error('🔍 연결 오류 상세:', {
           message: error.message,
-          healthUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/health`
+          healthUrl: `${import.meta.env.VITE_API_BASE_URL}/health`
         })
     return false
   }
@@ -221,8 +220,7 @@ const checkBackendConnection = async () => {
 // 백엔드 API를 통한 실제 마우스 제어 함수들
 const executeMouseMove = async (x: number, y: number) => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const apiUrl = `${baseUrl}/gesture/mouse/move`
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/gesture/mouse/move`
     console.log(`🔗 마우스 이동 API 호출: ${apiUrl}`)
     console.log(`📍 요청 좌표: (${Math.round(x)}, ${Math.round(y)})`)
     
@@ -257,7 +255,7 @@ const executeMouseMove = async (x: number, y: number) => {
             console.error('🔍 상세 오류:', {
           message: error.message,
           stack: error.stack,
-          apiUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/gesture/mouse/move`
+          apiUrl: `${import.meta.env.VITE_API_BASE_URL}/gesture/mouse/move`
         })
     // 백엔드가 연결되지 않은 경우 시뮬레이션으로 대체
     console.log(`🖱️ 마우스 이동 시뮬레이션: (${Math.round(x)}, ${Math.round(y)})`)
@@ -269,8 +267,7 @@ const executeClick = async (button: 'left' | 'right' = 'left') => {
     isPerformingAction.value = true
     
     const endpoint = button === 'left' ? 'left-click' : 'right-click'
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const apiUrl = `${baseUrl}/gesture/mouse/${endpoint}`
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/gesture/mouse/${endpoint}`
     console.log(`🔗 ${button} 클릭 API 호출: ${apiUrl}`)
     
     const response = await fetch(apiUrl, {
@@ -321,8 +318,7 @@ const executeScroll = async (direction: 'up' | 'down') => {
   try {
     isPerformingAction.value = true
     
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const apiUrl = `${baseUrl}/gesture/mouse/scroll`
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/gesture/mouse/scroll`
     console.log(`🔗 스크롤 API 호출: ${apiUrl}`)
     console.log(`📜 스크롤 방향: ${direction}`)
     
@@ -1354,13 +1350,10 @@ const toggleGestureRecognition = async () => {
       console.log('  ✌️ 검지+중지 = 위아래로 스크롤')
       
       console.log('🔧 환경 설정 정보:')
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-      const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8080/api'
-      console.log(`  - API Base URL: ${apiBaseUrl}`)
-      console.log(`  - WS Base URL: ${wsBaseUrl}`)
+      console.log(`  - API Base URL: ${import.meta.env.VITE_API_BASE_URL}`)
+      console.log(`  - WS Base URL: ${import.meta.env.VITE_WS_BASE_URL}`)
       console.log(`  - NODE_ENV: ${import.meta.env.NODE_ENV}`)
       console.log(`  - MODE: ${import.meta.env.MODE}`)
-      console.log(`  - 로컬 개발 모드: ${window.location.hostname === 'localhost'}`)
       
       if (!isBackendConnected) {
         console.log('🔧 참고: 백엔드 연결 실패로 브라우저 시뮬레이션 모드로 동작합니다.')

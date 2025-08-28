@@ -41,13 +41,5 @@ export default defineConfig({
     'process.env': {},
     __VUE_OPTIONS_API__: true,
     __VUE_PROD_DEVTOOLS__: false
-  },
-  // 로컬 개발용 환경변수 설정
-  envPrefix: 'VITE_',
-  // 개발 서버에서 환경변수 기본값 설정
-  server: {
-    port: 5173,
-    host: true,
-    cors: true
   }
 })

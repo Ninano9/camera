@@ -21,6 +21,10 @@ public class GestureController {
     @Autowired
     private MouseControlService mouseControlService;
     
+    public GestureController() {
+        System.out.println("🎯 GestureController 생성자 호출됨!");
+    }
+    
     /**
      * 테스트 엔드포인트
      */
